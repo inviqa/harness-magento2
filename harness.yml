@@ -1,0 +1,23 @@
+---
+harness('magento2'):
+  description: A docker based development environment for magento2
+  require:
+    services:
+      - proxy
+    confd:
+      - harness:/
+    attributes:
+      standard:
+        - aws.bucket
+        - app.repository
+      secret:
+        - aws.id
+        - aws.key
+        - magento.username
+        - magento.password
+        - magento.crypt.key
+---
+import:
+  - harness/config/*.yml
+  - harness/attributes/common.yml
+  - harness/attributes/environment/={env('MY127WS_ENV','local')}.yml

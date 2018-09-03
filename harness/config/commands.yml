@@ -1,0 +1,69 @@
+
+command('enable'):
+  env:
+    USE_DOCKER_SYNC: = @('host.os') == 'darwin' and @('docker-sync') == 'yes' ? 'yes':'no'
+    APP_BUILD:       = @('app.build')
+    APP_MODE:        = @('app.mode')
+    NAMESPACE:       = @('namespace')
+    HAS_ASSETS:      = @('aws.bucket') !== null ? 'yes':'no'
+  exec: |
+    #!bash(harness:/)
+    source harness/scripts/enable.sh
+
+command('disable'):
+  env:
+    USE_DOCKER_SYNC: = (@('host.os') == 'darwin' and @('docker-sync') == 'yes') ? 'yes':'no'
+    NAMESPACE: = @('namespace')
+  exec: |
+    #!bash(harness:/)
+    source harness/scripts/disable.sh
+
+command('destroy'):
+  env:
+    USE_DOCKER_SYNC: = (@('host.os') == 'darwin' and @('docker-sync') == 'yes') ? 'yes':'no'
+    NAMESPACE: = @('namespace')
+  exec: |
+    #!bash(harness:/)|@
+    source harness/scripts/destroy.sh
+
+command('app get-image <service>', 'app get-image'):
+  env:
+    IMAGE: = @('namespace') ~ '_' ~ input.argument('service') ~ ':latest'
+  exec: |
+    #!bash
+    echo -n "$IMAGE"
+
+command('app get-tag <service>', 'app get-tag'):
+  env:
+    TAG: = @('app.repository') ~ ':' ~ input.argument('service') ~ '-' ~ @('app.version')
+  exec: |
+    #!bash
+    echo -n "$TAG"
+
+command('app docker-stack-config <stack>', 'app docker-stack-config'): |
+  #!bash(harness:/)|=
+  docker-compose -p ={ @('namespace') } exec console bash -c "cat /stack/={ input.argument('stack') }/docker-compose.yml"
+
+command('exec %'): |
+  #!bash(harness:/)|=
+  passthru docker-compose -p ={ @('namespace') } exec -T -u build console ={ input.argument('%') }
+
+command('console'): |
+  #!bash(harness:/)|@
+  passthru docker-compose -p @('namespace') exec -u build console bash
+
+command('assets download'):
+  env:
+    AWS_ID:  =@('aws.id')
+    AWS_KEY: =@('aws.key')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru ws.aws s3 sync @('assets.remote') @('assets.local')
+
+command('assets upload'):
+  env:
+    AWS_ID:  =@('aws.id')
+    AWS_KEY: =@('aws.key')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru ws.aws s3 sync @('assets.local') @('assets.remote')

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+main()
+{
+    mysql.available
+    assets.apply
+    magento.refresh
+    app.welcome
+}
+
+bootstrap()
+{
+    . /lib/sidekick.sh
+    . /lib/functions.sh
+}
+
+bootstrap
+main

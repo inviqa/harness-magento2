@@ -1,0 +1,37 @@
+#!/bin/bash
+
+main()
+{
+    case "$1" in
+        "pass-1")
+            pass-1
+            ;;
+        "pass-2")
+            pass-2
+            ;;
+    esac
+}
+
+pass-1()
+{
+    skeleton.apply
+    composer.install
+    magento.tidy
+}
+
+pass-2()
+{
+    if [ "${APP_MODE}" = "production" ]; then
+        run "bin/magento setup:di:compile"
+        run "bin/magento setup:static-content:deploy"
+    fi
+}
+
+bootstrap()
+{
+    . /lib/sidekick.sh
+    . /lib/functions.sh
+}
+
+bootstrap
+main $@

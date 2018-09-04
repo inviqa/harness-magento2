@@ -37,6 +37,10 @@ assets.apply()
         run magento setup:upgrade
         magento.configure
     fi
+
+    if [ -f "/app/tools/assets/development/files.tar.gz" ]; then
+        run "tar -zxvf /app/tools/assets/development/files.tar.gz -C /app"
+    fi
 }
 
 composer.install()

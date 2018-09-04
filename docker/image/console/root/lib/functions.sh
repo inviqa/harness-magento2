@@ -39,7 +39,7 @@ assets.apply()
     fi
 
     if [ -f "/app/tools/assets/development/files.tar.gz" ]; then
-        tar -zxvf /app/tools/assets/development/files.tar.gz -C /app
+        run tar -zxvf /app/tools/assets/development/files.tar.gz -C /app
     fi
 }
 

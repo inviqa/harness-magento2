@@ -2,7 +2,6 @@ version: '2'
 options:
   compose-file-path:
     - .my127ws/docker-compose.yml
-    - .my127ws/docker-compose.override.yml
 syncs:
   {{ @('workspace.name') }}-sync:
     src: ../

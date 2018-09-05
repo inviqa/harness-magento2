@@ -1,0 +1,14 @@
+#!/bin/bash
+
+main()
+{
+    task $@
+}
+
+bootstrap()
+{
+    . /lib/sidekick.sh
+}
+
+bootstrap
+main $@

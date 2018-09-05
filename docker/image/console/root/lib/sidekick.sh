@@ -9,6 +9,20 @@ INDICATOR_SUCCESS="32m"
 INDICATOR_ERROR="31m"
 INDICATOR_PASSTHRU="37m"
 
+TASKS="/lib/task"
+
+task()
+{
+    local task_file="${TASKS}/${1//:/\/}.sh"
+    local task_name="task_${1//:/_}"
+
+    declare -F $task_name &>/dev/null || source $task_file
+
+    shift
+
+    $task_name $@
+}
+
 prompt()
 {
     if [ "${RUN_CWD}" != "$(pwd)" ]; then

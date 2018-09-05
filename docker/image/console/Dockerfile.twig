@@ -5,13 +5,7 @@
 # NOTE: This image is provided to speed up the build time but all
 # the files needed and used are in './root'
 
-FROM my127/magento2-console:latest
-
-{% if @('php.ext-xdebug.available') == 'yes' %}
-RUN apk --update add autoconf g++ make \
-  && pecl install xdebug && docker-php-ext-enable xdebug \
-  && apk del autoconf g++ make
-{% endif %}
+FROM my127/magento2-console:7.1-fpm-alpine
 
 COPY .my127ws/docker/image/console/root /
 

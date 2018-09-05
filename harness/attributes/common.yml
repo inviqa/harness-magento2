@@ -25,7 +25,6 @@ attributes.default:
     ini:
       memory_limit: 1024M
     ext-xdebug:
-      available: =(@('app.mode')=='development')?'yes':'no'
       enable: no
       config:
         remote_enable: 1

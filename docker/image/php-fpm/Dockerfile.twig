@@ -9,13 +9,7 @@
 FROM {{ @('namespace') }}_console:latest as console
 {% endif %}
 
-FROM my127/magento2:latest
-
-{% if @('php.ext-xdebug.available') == 'yes' %}
-RUN apk --update add autoconf g++ make \
-  && pecl install xdebug && docker-php-ext-enable xdebug \
-  && apk del autoconf g++ make
-{% endif %}
+FROM my127/magento2:7.1-fpm-alpine
 
 COPY root  /
 

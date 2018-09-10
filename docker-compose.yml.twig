@@ -39,6 +39,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
       DB_NAME: ${DB_NAME}
+      DB_ROOT_PASS: ${DB_ROOT_PASS}
     networks:
       - private
     depends_on:
@@ -88,7 +89,7 @@ services:
       - co.elastic.metrics/hosts=["tcp({{ @('namespace') }}_mysql:3306)/"]
       - co.elastic.metrics/username=root
     environment:
-      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}
       - MYSQL_DATABASE=${DB_NAME}
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASS}

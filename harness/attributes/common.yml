@@ -49,6 +49,7 @@ attributes.default:
     user: magento
     pass: magento
     name: magento
+    root_pass: DV6RdNY3QcFsBk7V
 
   domain: my127.site
   hostname: = @('namespace') ~ '.' ~ @('domain')

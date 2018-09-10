@@ -8,9 +8,9 @@ function task_assets_apply()
     if [ "$IS_DATABASE_APPLIED" = "no" ]; then
 
         if [ -f "/app/tools/assets/development/${DB_NAME}.sql.gz" ]; then
-            run "zcat /app/tools/assets/development/${DB_NAME}.sql.gz | mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME"
+            run "zcat /app/tools/assets/development/${DB_NAME}.sql.gz | mysql -h $DB_HOST -u root -p$DB_ROOT_PASS $DB_NAME"
         else
-            magento.install
+            task "magento:install"
         fi
 
         run magento setup:upgrade

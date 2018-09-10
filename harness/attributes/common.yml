@@ -15,6 +15,14 @@ attributes.default:
 
   docker-sync: no
 
+  composer:
+    auth:
+      basic:
+        magento:
+          path: repo.magento.com
+          username: = @('magento.username')
+          password: = @('magento.password')
+
   magento:
     edition: enterprise
     config:

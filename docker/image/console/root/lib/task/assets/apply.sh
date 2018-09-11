@@ -13,7 +13,8 @@ function task_assets_apply()
             task "magento:install"
         fi
 
-        run magento setup:upgrade
+        run "magento indexer:reindex"
+        run "magento setup:upgrade"
         
         task "magento:configure"
     fi
@@ -22,4 +23,6 @@ function task_assets_apply()
         [ -f "$file" ] || continue
         run "tar -zxvf ${file} -C /app"
     done
+
+    chmod -R o+Xr /app/pub
 }

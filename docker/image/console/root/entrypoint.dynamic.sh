@@ -9,8 +9,8 @@ setup_app_volume_permissions()
 {
     case "$STRATEGY" in
         "host-linux-normal")
-            usermod  -u $(stat -c '%u' /app) build
-            groupmod -g $(stat -c '%g' /app) build
+            usermod  -u "$(stat -c '%u' /app)" build
+            groupmod -g "$(stat -c '%g' /app)" build
             ;;
         "host-osx-normal")
             usermod  -u 1000 build

@@ -16,27 +16,27 @@ task()
     local task_file="${TASKS}/${1//:/\/}.sh"
     local task_name="task_${1//:/_}"
 
-    declare -F $task_name &>/dev/null || source $task_file
+    declare -F "$task_name" &>/dev/null || source "$task_file"
 
     shift
 
-    $task_name $@
+    $task_name "$@"
 }
 
 prompt()
 {
     if [ "${RUN_CWD}" != "$(pwd)" ]; then
         RUN_CWD="$(pwd)"
-        echo -e "\033[1m[\033[0mdocker(console):$(pwd)\033[1m]:\033[0m"
+        echo -e "\\033[1m[\\033[0mdocker(console):$(pwd)\\033[1m]:\\033[0m"
     fi
 }
 
 run()
 {
-    if [ "${VERBOSE}" = "no" ]; then
+    if [ "$VERBOSE" = "no" ]; then
         prompt
 
-        echo "  > ${@}"
+        echo "  > $*"
         setCommandIndicator $INDICATOR_RUNNING
         bash -c "$@" > /tmp/my127ws-stdout.txt 2> /tmp/my127ws-stderr.txt
 
@@ -55,7 +55,7 @@ run()
             setCommandIndicator $INDICATOR_SUCCESS
         fi
     else
-        passthru $@
+        passthru "$@"
     fi
 }
 
@@ -63,7 +63,7 @@ passthru()
 {
     prompt
 
-    echo -e "\033[${INDICATOR_PASSTHRU}■\033[0m > ${@}"
+    echo -e "\\033[${INDICATOR_PASSTHRU}■\\033[0m > $*"
     bash -c "$@"
 
     if [ "$?" != "0" ]; then
@@ -73,9 +73,9 @@ passthru()
 
 setCommandIndicator()
 {
-    echo -ne "\033[1A";
-    echo -ne "\033[$1"
+    echo -ne "\\033[1A";
+    echo -ne "\\033[$1"
     echo -n "■"
-    echo -ne "\033[0m"
-    echo -ne "\033[1E";
+    echo -ne "\\033[0m"
+    echo -ne "\\033[1E";
 }

@@ -8,17 +8,17 @@ main()
 setup_app_networking()
 {
     # we always want to resolve the app host to traefik
-    if ! grep $APP_HOST /etc/hosts > /dev/null ; then
-        DOCKER_INTERNAL_IP=`/sbin/ip route|awk '/default/ { print $3 }'`
-        echo -e "$DOCKER_INTERNAL_IP\t$APP_HOST" | tee -a /etc/hosts > /dev/null
+    if ! grep "$APP_HOST" /etc/hosts > /dev/null ; then
+        DOCKER_INTERNAL_IP=$(/sbin/ip route|awk '/default/ { print $3 }')
+        echo -e "$DOCKER_INTERNAL_IP    $APP_HOST" | tee -a /etc/hosts > /dev/null
     fi
 
     # make linux consistent with docker-for-mac
     if [ "${HOST_OS_FAMILY}" = "linux" ]; then
         DOCKER_INTERNAL_HOST="host.docker.internal"
         if ! grep $DOCKER_INTERNAL_HOST /etc/hosts > /dev/null ; then
-            DOCKER_INTERNAL_IP=`/sbin/ip route|awk '/default/ { print $3 }'`
-            echo -e "$DOCKER_INTERNAL_IP\t$DOCKER_INTERNAL_HOST" | tee -a /etc/hosts > /dev/null
+            DOCKER_INTERNAL_IP=$(/sbin/ip route|awk '/default/ { print $3 }')
+            echo -e "$DOCKER_INTERNAL_IP    $DOCKER_INTERNAL_HOST" | tee -a /etc/hosts > /dev/null
         fi
     fi
 }
@@ -27,8 +27,8 @@ setup_app_volume_permissions()
 {
     case "$STRATEGY" in
         "host-linux-normal")
-            usermod  -u $(stat -c '%u' /app) www-data
-            groupmod -g $(stat -c '%g' /app) www-data
+            usermod  -u "$(stat -c '%u' /app)" www-data
+            groupmod -g "$(stat -c '%g' /app)" www-data
             ;;
         "host-osx-normal")
             usermod  -u 1000 www-data

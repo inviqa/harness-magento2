@@ -51,6 +51,10 @@ command('exec %'): |
 command('console'): |
   #!bash(harness:/)|@
   passthru docker-compose -p @('namespace') exec -u build console bash
+  
+command('redis-flush'): |
+  #!bash(harness:/)|@
+  docker-compose -p @('namespace') exec redis redis-cli flushall
 
 command('assets download'):
   env:

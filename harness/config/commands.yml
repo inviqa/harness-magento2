@@ -51,6 +51,10 @@ command('exec %'): |
 command('console'): |
   #!bash(harness:/)|@
   passthru docker-compose -p @('namespace') exec -u build console bash
+  
+command('db-console'): |
+  #!bash(harness:/)|@
+  docker-compose -p @('namespace') exec console bash -c 'mysql -h$DB_HOST -u$DB_USER -p$DB_PASS $DB_NAME'
 
 command('assets download'):
   env:

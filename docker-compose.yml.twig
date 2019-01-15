@@ -4,6 +4,9 @@
 {% endif %}
 version: '3'
 services:
+{% if @('extra_services') %}
+{{ to_yaml(@('extra_services')) | raw }}
+{% endif %}
   chrome:
     build: docker/image/chrome
     networks:

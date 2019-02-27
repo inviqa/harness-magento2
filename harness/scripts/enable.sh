@@ -30,6 +30,7 @@ if [ ! -f .flag-built ]; then
 
 else
     run docker-compose -p "$NAMESPACE" start
+    passthru docker-compose -p "$NAMESPACE" exec -T -u build console app welcome
 fi
 
 if [ "$APP_BUILD" = "dynamic" ]; then

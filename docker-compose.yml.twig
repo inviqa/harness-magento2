@@ -9,30 +9,34 @@ services:
 {% endif %}
   chrome:
     build: docker/image/chrome
-    networks:
-      - shared
-      - private
     environment:
       HOST_OS_FAMILY: ${HOST_OS_FAMILY}
       APP_HOST: ${APP_HOST}
     labels:
       - traefik.enable=false
+    networks:
+      private:
+        aliases:
+          - chrome
+      shared:
+        aliases:
+          - {{ @('namespace') }}_chrome
   console:
-    {% if @('app.build') == 'dynamic' %} 
+    {% if @('app.build') == 'dynamic' %}
     entrypoint: /entrypoint.dynamic.sh
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
       - ./skeleton:/home/build/skeleton
-    {% endif %} 
+    {% endif %}
     labels:
       - traefik.enable=false
     build:
       context: ../
       dockerfile: .my127ws/docker/image/console/Dockerfile
-      {% if @('app.build') == 'static' %} 
+      {% if @('app.build') == 'static' %}
       args:
         APP_MODE: {{ @('app.mode') }}
-      {% endif %} 
+      {% endif %}
     environment: &APP_ENV_VARS
       MAGENTO_CRYPT_KEY: ${MAGENTO_CRYPT_KEY}
       HOST_OS_FAMILY: ${HOST_OS_FAMILY}
@@ -50,10 +54,10 @@ services:
       - redis
   nginx:
     build: docker/image/nginx
-    {% if @('app.build') == 'dynamic' %} 
+    {% if @('app.build') == 'dynamic' %}
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
-    {% endif %} 
+    {% endif %}
     labels:
       - traefik.backend=${APP_NAME}
       - traefik.frontend.rule=Host:${APP_HOST}
@@ -64,20 +68,31 @@ services:
     depends_on:
       - php-fpm
     networks:
-      - private
-      - shared
+      private:
+        aliases:
+          - nginx
+      monitoring:
+        aliases:
+          - {{ @('namespace') }}_nginx
+      shared:
+        aliases:
+          - {{ @('namespace') }}_nginx
   php-fpm:
     build: docker/image/php-fpm
-    {% if @('app.build') == 'dynamic' %} 
+    {% if @('app.build') == 'dynamic' %}
     entrypoint: /entrypoint.dynamic.sh
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
-    {% endif %} 
+    {% endif %}
     labels:
       - traefik.enable=false
     networks:
-      - private
-      - shared
+      private:
+        aliases:
+          - php-fpm
+      monitoring:
+        aliases:
+          - {{ @('namespace') }}_php-fpm
     depends_on:
       - console
     environment:
@@ -97,18 +112,29 @@ services:
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASS}
     networks:
-      - private
-      - shared
+      private:
+        aliases:
+          - mysql
+      monitoring:
+        aliases:
+          - {{ @('namespace') }}_mysql
   redis:
     image: redis:4-alpine
     labels:
-      - traefik.enable=false
       - co.elastic.logs/module=redis
     networks:
-      - private
+      private:
+        aliases:
+          - redis
+      monitoring:
+        aliases:
+          - {{ @('namespace') }}_redis
 networks:
   private:
     external: false
+  monitoring:
+    external:
+      name: my127ws_monitoring
   shared:
     external:
       name: my127ws

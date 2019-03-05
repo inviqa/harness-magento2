@@ -18,21 +18,21 @@ services:
       - private
       - shared
   console:
-    {% if @('app.build') == 'dynamic' %}
+    {% if @('app.build') == 'dynamic' %} 
     entrypoint: /entrypoint.dynamic.sh
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
       - ./skeleton:/home/build/skeleton
-    {% endif %}
+    {% endif %} 
     labels:
       - traefik.enable=false
     build:
       context: ../
       dockerfile: .my127ws/docker/image/console/Dockerfile
-      {% if @('app.build') == 'static' %}
+      {% if @('app.build') == 'static' %} 
       args:
         APP_MODE: {{ @('app.mode') }}
-      {% endif %}
+      {% endif %} 
     environment: &APP_ENV_VARS
       MAGENTO_CRYPT_KEY: ${MAGENTO_CRYPT_KEY}
       HOST_OS_FAMILY: ${HOST_OS_FAMILY}
@@ -50,10 +50,10 @@ services:
       - private
   nginx:
     build: docker/image/nginx
-    {% if @('app.build') == 'dynamic' %}
+    {% if @('app.build') == 'dynamic' %} 
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
-    {% endif %}
+    {% endif %} 
     labels:
       - traefik.backend=${APP_NAME}
       - traefik.frontend.rule=Host:${APP_HOST}
@@ -65,19 +65,23 @@ services:
       - php-fpm:php-fpm
     networks:
       - private
-      - monitoring
       - shared
+    depends_on:
+      - php-fpm
   php-fpm:
     build: docker/image/php-fpm
-    {% if @('app.build') == 'dynamic' %}
+    {% if @('app.build') == 'dynamic' %} 
     entrypoint: /entrypoint.dynamic.sh
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
-    {% endif %}
+    {% endif %} 
     labels:
       - traefik.enable=false
     depends_on:
       - console
+    networks:
+      - private
+      - shared
     links:
       - mysql:mysql
       - redis:redis
@@ -99,20 +103,17 @@ services:
       - MYSQL_PASSWORD=${DB_PASS}
     networks:
       - private
-      - monitoring
+      - shared
   redis:
     image: redis:4-alpine
     labels:
       - co.elastic.logs/module=redis
     networks:
       - private
-      - monitoring
+      - shared
 networks:
   private:
     external: false
-  monitoring:
-    external:
-      name: my127ws_monitoring
   shared:
     external:
       name: my127ws

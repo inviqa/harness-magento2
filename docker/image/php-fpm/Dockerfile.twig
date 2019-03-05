@@ -9,7 +9,7 @@
 FROM {{ @('namespace') }}_console:latest as console
 {% endif %}
 
-FROM my127/magento2:7.1-fpm-alpine
+FROM my127/magento2:7.1-fpm-stretch
 
 COPY root  /
 

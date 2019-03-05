@@ -33,14 +33,14 @@ prompt()
 
 run()
 {
+    local COMMAND="$*"
     if [ "$VERBOSE" = "no" ]; then
         prompt
 
-        echo "  > $*"
+        echo "  > ${COMMAND[*]}"
         setCommandIndicator $INDICATOR_RUNNING
-        bash -c "$@" > /tmp/my127ws-stdout.txt 2> /tmp/my127ws-stderr.txt
 
-        if [ "$?" != "0" ]; then
+        if ! bash -c "${COMMAND[@]}" > /tmp/my127ws-stdout.txt 2> /tmp/my127ws-stderr.txt; then
             setCommandIndicator $INDICATOR_ERROR
 
             cat /tmp/my127ws-stderr.txt
@@ -55,7 +55,7 @@ run()
             setCommandIndicator $INDICATOR_SUCCESS
         fi
     else
-        passthru "$@"
+        passthru "${COMMAND[@]}"
     fi
 }
 

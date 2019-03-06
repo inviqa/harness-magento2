@@ -75,3 +75,18 @@ command('assets upload'):
   exec: |
     #!bash(workspace:/)|@
     passthru ws.aws s3 sync @('assets.local') @('assets.remote')
+
+command('frontend build'):
+  exec: |
+    #!bash(harness:/)|@
+    docker-compose -p @('namespace') exec -u build console bash -i -c 'cd @('frontend.path') && if [ ! -f "package.json" ]; then exit 0; fi && npm install && node_modules/.bin/gulp build'
+
+command('frontend watch'):
+  exec: |
+    #!bash(harness:/)|@
+    docker-compose -p @('namespace') exec -u build console bash -i -c 'cd @('frontend.path') && if [ ! -f "package.json" ]; then exit 0; fi && node_modules/.bin/gulp serve'
+
+command('frontend console'):
+  exec: |
+    #!bash(harness:/)|@
+    docker-compose -p @('namespace') exec -u build console bash -i -c 'cd @('frontend.path'); bash'

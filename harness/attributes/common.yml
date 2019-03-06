@@ -23,6 +23,9 @@ attributes.default:
           username: = @('magento.username')
           password: = @('magento.password')
 
+  frontend:
+    path: /app
+
   magento:
     edition: enterprise
     config:

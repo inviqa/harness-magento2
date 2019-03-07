@@ -35,5 +35,7 @@ else
 fi
 
 if [ "$APP_BUILD" = "dynamic" ]; then
-    [[ "$USE_DOCKER_SYNC" = "yes" ]] && passthru docker-sync start
+    if [[ "$USE_DOCKER_SYNC" = "yes" ]]; then
+        passthru docker-sync start
+    fi
 fi

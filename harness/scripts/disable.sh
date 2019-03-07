@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
-[[ "$USE_DOCKER_SYNC" = "yes" ]] && run docker-sync stop
+if [[ "$USE_DOCKER_SYNC" = "yes" ]]; then
+    run docker-sync stop
+fi
 run docker-compose -p "$NAMESPACE" stop

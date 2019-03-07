@@ -107,6 +107,7 @@ services:
   redis:
     image: redis:4-alpine
     labels:
+      - traefik.enable=false
       - co.elastic.logs/module=redis
     networks:
       - private

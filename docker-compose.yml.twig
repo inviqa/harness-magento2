@@ -23,6 +23,7 @@ services:
     volumes:
       - {{ (dockersync) ? @('workspace.name') ~ '-sync:/app:nocopy' : '../:/app:delegated' }}
       - ./skeleton:/home/build/skeleton
+      - ./docker/image/console/root/lib/task:/lib/task
     {% endif %} 
     labels:
       - traefik.enable=false

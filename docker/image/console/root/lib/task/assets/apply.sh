@@ -18,11 +18,6 @@ function task_assets_apply()
         else
             task "magento:install"
         fi
-
-        run "magento setup:upgrade"
-        run "magento indexer:reindex"
-
-        task "magento:configure"
     fi
 
     for file in "/app/${ASSETS_DIR}/"*.files.{tgz,tar.gz}; do

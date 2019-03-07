@@ -29,7 +29,7 @@ COPY --chown=build:build ./                      /app
 COPY                     ./.my127ws/docker/stack /stack
 USER build
 RUN rm -rf /app/.my127ws
-RUN app.build pass-1
+RUN app build
 USER root
 {% else %}
 VOLUME /app

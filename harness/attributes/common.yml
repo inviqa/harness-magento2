@@ -23,8 +23,30 @@ attributes.default:
           username: = @('magento.username')
           password: = @('magento.password')
 
+  backend:
+    path: /app
+    build:
+      when: -f "composer.json"
+      steps:
+        - task "composer:install"
+        - task "magento:tidy"
+    init:
+      steps:
+        - run "magento config:set 'web/unsecure/base_url'       \"https://${APP_HOST}/\""
+        - run "magento config:set 'web/secure/base_url'         \"https://${APP_HOST}/\""
+        - run "magento config:set 'web/secure/use_in_frontend'  '1'
+        - run "magento config:set 'web/secure/use_in_adminhtml' '1'
+        - run "magento config:set 'web/seo/use_rewrites'        '1'
+        - run "magento cache:clean"
+
   frontend:
     path: /app
+    watch: node_modules/.bin/gulp serve
+    build:
+      when: -f "package.json"
+      steps:
+        - run "npm install"
+        - run "node_modules/.bin/gulp build"
 
   magento:
     edition: enterprise

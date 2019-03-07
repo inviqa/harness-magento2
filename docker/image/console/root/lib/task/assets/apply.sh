@@ -2,26 +2,32 @@
 
 function task_assets_apply()
 {
+    local ASSETS_DIR="${ASSETS_DIR:-tools/assets/development}"
+
     SQL="SELECT IF (COUNT(*) = 0, 'no', 'yes') FROM information_schema.tables WHERE table_schema = '$DB_NAME';"
     IS_DATABASE_APPLIED="$(mysql -ss -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" -e "$SQL")"
 
     if [ "$IS_DATABASE_APPLIED" = "no" ]; then
+        local DATABASE_FILE="/app/${ASSETS_DIR}/${DB_NAME}.sql.gz"
+        if [ ! -f "$DATABASE_FILE" ]; then
+            DATABASE_FILE="$(find "/app/${ASSETS_DIR}/" -maxdepth 1 -name "${DB_NAME}*.sql.gz" -print | head -n1)"
+        fi
 
-        if [ -f "/app/tools/assets/development/${DB_NAME}.sql.gz" ]; then
-            run "zcat /app/tools/assets/development/${DB_NAME}.sql.gz | mysql -h $DB_HOST -u root -p$DB_ROOT_PASS $DB_NAME"
+        if [ -f "$DATABASE_FILE" ]; then
+            run "zcat $DATABASE_FILE | mysql -h $DB_HOST -u root -p$DB_ROOT_PASS $DB_NAME"
         else
             task "magento:install"
         fi
 
-        run "magento indexer:reindex"
         run "magento setup:upgrade"
-        
+        run "magento indexer:reindex"
+
         task "magento:configure"
     fi
 
-    for file in /app/tools/assets/development/*.files.{tgz,tar.gz}; do
+    for file in "/app/${ASSETS_DIR}/"*.files.{tgz,tar.gz}; do
         [ -f "$file" ] || continue
-        run "tar -zxvf ${file} -C /app"
+        run "tar -xvf ${file} -C /app"
     done
 
     chmod -R o+Xr /app/pub

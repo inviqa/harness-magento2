@@ -4,6 +4,10 @@ function task_init()
 {
     task "mysql:available"
     task "assets:apply"
-    task "magento:refresh"
+
+    {% for step in @('backend.init.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+
     task "welcome"
 }

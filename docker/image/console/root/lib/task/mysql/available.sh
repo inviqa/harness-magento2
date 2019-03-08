@@ -12,6 +12,6 @@ function task_mysql_available()
         fi
 
         sleep 1
-        ((counter++))
+        ((++counter))
     done
 }

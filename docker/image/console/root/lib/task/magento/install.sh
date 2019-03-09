@@ -52,6 +52,6 @@ function task_magento_install()
 
     rm -f /app/app/etc/env.php
 
-    task "skeleton:apply"
+    task "overlay:apply"
     task "assets:dump"
 }

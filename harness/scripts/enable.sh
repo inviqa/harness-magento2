@@ -11,7 +11,8 @@ if [ ! -f .flag-built ]; then
     fi
 
     passthru docker-compose -p "$NAMESPACE" pull
-    passthru docker-compose -p "$NAMESPACE" up -d --build
+    passthru docker-compose -p "$NAMESPACE" build --pull
+    passthru docker-compose -p "$NAMESPACE" up -d
 
     if [[ "$APP_BUILD" = "dynamic" ]]; then
         passthru docker-compose -p "$NAMESPACE" exec -T -u build console app build

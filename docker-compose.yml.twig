@@ -47,6 +47,7 @@ services:
     links:
       - mysql:mysql
       - redis:redis
+      - redis-session:redis-session
     networks:
       - private
   nginx:
@@ -86,6 +87,7 @@ services:
     links:
       - mysql:mysql
       - redis:redis
+      - redis-session:redis-session
     environment:
       <<: *APP_ENV_VARS
   mysql:
@@ -109,6 +111,13 @@ services:
     image: redis:4-alpine
     labels:
       - traefik.enable=false
+      - co.elastic.logs/module=redis
+    networks:
+      - private
+      - shared
+  redis-session:
+    image: redis:4-alpine
+    labels:
       - co.elastic.logs/module=redis
     networks:
       - private

@@ -1,8 +1,8 @@
   [
       'save'  => 'redis',
       'redis' => [
-          'host'                  => getenv('REDIS_HOST')?:'redis',
-          'port'                  => getenv('REDIS_PORT')?:'6379',
+          'host'                  => getenv('REDIS_SESSION_HOST')?:'redis-session',
+          'port'                  => getenv('REDIS_SESSION_PORT')?:'6379',
           'password'              => '',
           'timeout'               => '2.5',
           'persistent_identifier' => '',

@@ -109,6 +109,8 @@ services:
       - shared
   redis:
     image: redis:4-alpine
+    # 1GB; evict any least recently used key even if they don't have a TTL
+    command: redis-server --maxmemory 1073742000 --maxmemory-policy allkeys-lru
     labels:
       - traefik.enable=false
       - co.elastic.logs/module=redis
@@ -117,7 +119,10 @@ services:
       - shared
   redis-session:
     image: redis:4-alpine
+    # 1GB; evict key that would expire soonest
+    command: redis-server --maxmemory 1073742000 --maxmemory-policy volatile-ttl
     labels:
+      - traefik.enable=false
       - co.elastic.logs/module=redis
     networks:
       - private

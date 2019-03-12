@@ -45,6 +45,7 @@ services:
       DB_NAME: ${DB_NAME}
       DB_ROOT_PASS: ${DB_ROOT_PASS}
     links:
+      - chrome:chrome
       - mysql:mysql
       - redis:redis
       - redis-session:redis-session

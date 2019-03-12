@@ -1,8 +1,17 @@
 #!/bin/bash
 
-# we want application requests to go via traefik on the host system
+# make linux consistent with docker-for-mac
+if [ "${HOST_OS_FAMILY}" = "linux" ]; then
+    DOCKER_INTERNAL_HOST="host.docker.internal"
+    if ! grep $DOCKER_INTERNAL_HOST /etc/hosts > /dev/null ; then
+        DOCKER_INTERNAL_IP=$(/sbin/ip route|awk '/default/ { print $3 }')
+        echo -e "$DOCKER_INTERNAL_IP    $DOCKER_INTERNAL_HOST" | tee -a /etc/hosts > /dev/null
+    fi
+fi
+
+# we always want to resolve the app host to traefik
 if ! grep "$APP_HOST" /etc/hosts > /dev/null ; then
-    DOCKER_INTERNAL_IP=$(/sbin/ip route|awk '/default/ { print $3 }')
+    DOCKER_INTERNAL_IP=$(getent hosts host.docker.internal | cut -d" " -f1 | head -n1)
     echo -e "$DOCKER_INTERNAL_IP    $APP_HOST" | tee -a /etc/hosts > /dev/null
 fi
 

@@ -7,6 +7,7 @@ attribute('app.repository'): null
 attribute('aws.id'): null
 attribute('aws.key'): null
 
+attribute('composer.auth.github'): '= decrypt("YTozOntpOjA7czo3OiJkZWZhdWx0IjtpOjE7czoyNDoinL5DnWkBgryX2PryJSL+wlK54aC6r6MXIjtpOjI7czo1NjoiC4iwQbTf/Cs0jUEAyFT2Ur1FsYSBTaTe2iWNFYrP10PvaLiiYdy94iWZrxxeNH/36UfeBBYqaNQiO30=")'
 attribute('magento.username'): '= decrypt("YTozOntpOjA7czo3OiJkZWZhdWx0IjtpOjE7czoyNDoiDCaoEZAMA7goAlYm82LEUcemnRcqTWiLIjtpOjI7czo0ODoiOJKHBza25LO0mKZjyAcaj84PQcrtNRPiyRBz0Gi60/sOPZJvdHdy7jrGYmE7incoIjt9")'
 attribute('magento.password'): '= decrypt("YTozOntpOjA7czo3OiJkZWZhdWx0IjtpOjE7czoyNDoitVm7tDtK7cFYVreLgIioQ1cexT49ZSkeIjtpOjI7czo0ODoi6JMnVlB/IxaewBfLIQwd70fT3Pm12ZpqmQOcks/wQeq3HI7TDgEib2NjO/xtjF9SIjt9")'
 attribute('magento.crypt.key'): '= decrypt("YTozOntpOjA7czo3OiJkZWZhdWx0IjtpOjE7czoyNDoiEJ+pbajsKt8vEZl2TS6GRsXyf2CkxndGIjtpOjI7czozMjoiLDRgUOty8BnRqlvaCMRYvCe7bbpW3bYtx9Jn2JbVp1UiO30=")'

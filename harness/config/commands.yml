@@ -26,24 +26,6 @@ command('destroy'):
     #!bash(harness:/)|@
     source harness/scripts/destroy.sh
 
-command('app get-image <service>', 'app get-image'):
-  env:
-    IMAGE: = @('namespace') ~ '_' ~ input.argument('service') ~ ':latest'
-  exec: |
-    #!bash
-    echo -n "$IMAGE"
-
-command('app get-tag <service>', 'app get-tag'):
-  env:
-    TAG: = @('app.repository') ~ ':' ~ input.argument('service') ~ '-' ~ @('app.version')
-  exec: |
-    #!bash
-    echo -n "$TAG"
-
-command('app docker-stack-config <stack>', 'app docker-stack-config'): |
-  #!bash(harness:/)|=
-  docker-compose -p ={ @('namespace') } exec console bash -c "cat /stack/={ input.argument('stack') }/docker-compose.yml"
-
 command('exec %'): |
   #!bash(harness:/)|=
   passthru docker-compose -p ={ @('namespace') } exec -T -u build console ={ input.argument('%') }
@@ -55,10 +37,6 @@ command('console'): |
 command('db-console'): |
   #!bash(harness:/)|@
   docker-compose -p @('namespace') exec console bash -c 'mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME"'
-
-command('redis-flush'): |
-  #!bash(harness:/)|@
-  docker-compose -p @('namespace') exec redis redis-cli flushall
 
 command('assets download'):
   env:

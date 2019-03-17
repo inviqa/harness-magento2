@@ -1,15 +1,10 @@
+FROM {{ @('docker.image.php-fpm') }}
 
-# github: https://github.com/my127/docker-magento2
-# dockerhub: https://hub.docker.com/r/my127/magento2
-# 
-# NOTE: This image is provided to speed up the build time but all
-# the files needed and used are in './root'
+WORKDIR /app
 
 {% if @('app.build') == 'static' %}
 FROM {{ @('namespace') }}_console:latest as console
 {% endif %}
-
-FROM my127/magento2:7.1-fpm-stretch
 
 COPY root  /
 

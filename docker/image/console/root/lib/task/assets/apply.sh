@@ -16,14 +16,12 @@ function task_assets_apply()
         if [ -f "$DATABASE_FILE" ]; then
             run "zcat $DATABASE_FILE | mysql -h $DB_HOST -u root -p$DB_ROOT_PASS $DB_NAME"
         else
-            task "magento:install"
+            task "install"
         fi
     fi
 
     for file in "/app/${ASSETS_DIR}/"*.files.{tgz,tar.gz}; do
         [ -f "$file" ] || continue
-        run "tar -xvf ${file} -C /app"
+        run "tar -zxvf ${file} -C /app"
     done
-
-    chmod -R o+Xr /app/pub
 }

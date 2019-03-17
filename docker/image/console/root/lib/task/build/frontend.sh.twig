@@ -3,7 +3,7 @@
 function task_build_frontend()
 {(
     cd {{ @('frontend.path') }}
-
+    
     if [ ! {{ @('frontend.build.when')|raw }} ]; then
         return 0;
     fi

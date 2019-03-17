@@ -13,15 +13,17 @@ attributes.default:
     #   production  - leaner images with less tooling and magento is run in production mode
     mode: development
 
-  docker-sync: no
+  docker-sync: yes
+
+  docker:
+    image:
+      console: = 'my127/php:' ~ @('php.version') ~ '-fpm-stretch-console'
+      php-fpm: = 'my127/php:' ~ @('php.version') ~ '-fpm-stretch'
 
   composer:
     auth:
-      basic:
-        magento:
-          path: repo.magento.com
-          username: = @('magento.username')
-          password: = @('magento.password')
+      basic: ~
+      github: ~
 
   backend:
     path: /app
@@ -29,31 +31,18 @@ attributes.default:
       when: -f "composer.json"
       steps:
         - task "composer:install"
-        - task "magento:tidy"
+    install:
+      steps: []
     init:
-      steps:
-        - run "magento config:set 'web/unsecure/base_url'       \"https://${APP_HOST}/\""
-        - run "magento config:set 'web/secure/base_url'         \"https://${APP_HOST}/\""
-        - run "magento config:set 'web/secure/use_in_frontend'  '1'"
-        - run "magento config:set 'web/secure/use_in_adminhtml' '1'"
-        - run "magento config:set 'web/seo/use_rewrites'        '1'"
-        - run "magento setup:upgrade"
-        - run "magento cache:clean"
+      steps: []
 
   frontend:
     path: /app
-    watch: node_modules/.bin/gulp serve
+    watch: npm watch
     build:
       when: -f "package.json"
       steps:
         - run "npm install"
-        - run "node_modules/.bin/gulp build"
-
-  magento:
-    edition: enterprise
-    config:
-      session:
-        save: redis
 
   node:
     # only set this attribute if you wish to override the supplied node version, by default
@@ -61,6 +50,7 @@ attributes.default:
     version: null
 
   php:
+    version: 7.3
     ini:
       memory_limit: 1024M
     ext-xdebug:
@@ -77,9 +67,9 @@ attributes.default:
 
   database:
     host: mysql
-    user: magento
-    pass: magento
-    name: magento
+    user: app
+    pass: app
+    name: app
     root_pass: DV6RdNY3QcFsBk7V
 
   domain: my127.site
@@ -115,7 +105,7 @@ attributes.default:
       uoe7Xo1R+KlrVRxKAlNQ5lfzhAAgDNaOhpgkH4cehfPrIIh9rwNMSkHDRS0DELvY
       DPyRumPy7zTg5YPzzl7tM1/OPA==
       -----END PRIVATE KEY-----
-      
+
     crt: |
       -----BEGIN CERTIFICATE-----
       MIIC6zCCAdOgAwIBAgIJAI4syJyPEWAMMA0GCSqGSIb3DQEBBQUAMAwxCjAIBgNV

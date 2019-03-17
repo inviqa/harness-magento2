@@ -1,5 +1,5 @@
-workspace('magento2-sample'):
-  description: generated local workspace for magento2-sample.
+workspace('ci-magento2-sample'):
+  description: generated local workspace for ci-magento2-sample.
   harness: inviqa/magento2
 
 attribute('aws.bucket'): null

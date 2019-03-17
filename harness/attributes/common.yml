@@ -9,8 +9,8 @@ attributes.default:
     build: dynamic
 
     # mode - development|production
-    #   development - additional tooling is made available and magento is run in development mode
-    #   production  - leaner images with less tooling and magento is run in production mode
+    #   development - additional tooling is made available and application is run in development mode
+    #   production  - leaner images with less tooling and application is run in production mode
     mode: development
 
   docker-sync: yes

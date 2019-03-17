@@ -3,7 +3,7 @@
 function task_build_backend()
 {(
     cd {{ @('backend.path') }}
-
+    
     if [ ! {{ @('backend.build.when')|raw }} ]; then
         return 0;
     fi

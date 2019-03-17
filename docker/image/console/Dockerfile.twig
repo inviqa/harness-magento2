@@ -1,17 +1,10 @@
-
-# github: https://github.com/my127/docker-magento2
-# dockerhub: https://hub.docker.com/r/my127/magento2
-#
-# NOTE: This image is provided to speed up the build time but all
-# the files needed and used are in './root'
-
-FROM my127/magento2:7.1-fpm-stretch-console
+FROM {{ @('docker.image.console') }}
 
 COPY .my127ws/docker/image/console/root /
 RUN chown -R build:build /home/build
 
 ENV APP_MODE={{ @('app.mode') }} \
-    ASSETS_DIR={{ @('assets.local') }}
+  ASSETS_DIR={{ @('assets.local') }}
 
 {% if @('node.version') is not null %}
 USER build

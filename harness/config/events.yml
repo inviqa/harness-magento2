@@ -8,4 +8,3 @@ after('harness.refresh'): |
   run docker-compose -p @('namespace') stop
   run docker-compose -p @('namespace') pull
   run docker-compose -p @('namespace') up -d --build
-  

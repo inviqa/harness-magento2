@@ -1,0 +1,15 @@
+{% if @('app.build') == 'static' %}
+FROM {{ @('docker.repository') ~ ':' ~ @('app.version') }}-console as console
+{% endif %}
+
+FROM {{ @('docker.image.php-fpm') }}
+WORKDIR /app
+COPY root  /
+
+{% if @('app.build') == 'static' %}
+RUN chown www-data:www-data /app
+COPY --from=console --chown=www-data:www-data /app /app
+{% else %}
+VOLUME /app
+{% endif %}
+ENV APP_MODE {{ @('app.mode') }}

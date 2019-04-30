@@ -1,0 +1,98 @@
+
+command('enable'):
+  env:
+    USE_DOCKER_SYNC:      = @('host.os') == 'darwin' and @('docker-sync') == 'yes' ? 'yes':'no'
+    APP_BUILD:            = @('app.build')
+    APP_MODE:             = @('app.mode')
+    NAMESPACE:            = @('namespace')
+    HAS_ASSETS:           = @('aws.bucket') !== null ? 'yes':'no'
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)
+    source .my127ws/harness/scripts/enable.sh
+
+command('disable'):
+  env:
+    USE_DOCKER_SYNC:      = (@('host.os') == 'darwin' and @('docker-sync') == 'yes') ? 'yes':'no'
+    NAMESPACE:            = @('namespace')
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)
+    source .my127ws/harness/scripts/disable.sh
+
+command('destroy'):
+  env:
+    NAMESPACE:            = @('namespace')
+    APP_BUILD:            = @('app.build')
+    APP_VERSION:          = @('app.version')
+    DOCKER_REPOSITORY:    = @('docker.repository')
+    USE_DOCKER_SYNC:      = (@('host.os') == 'darwin' and @('docker-sync') == 'yes') ? 'yes':'no'
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    source .my127ws/harness/scripts/destroy.sh
+
+command('exec %'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|=
+    docker-compose exec -T -u build console ={ input.argument('%') }
+
+command('console'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru docker-compose exec -u build console bash
+
+command('db-console'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru docker-compose exec console bash -c 'mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME"'
+
+command('assets download'):
+  env:
+    AWS_ID:  =@('aws.id')
+    AWS_KEY: =@('aws.key')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru ws.aws s3 sync @('assets.remote') @('assets.local')
+
+command('assets upload'):
+  env:
+    AWS_ID:  =@('aws.id')
+    AWS_KEY: =@('aws.key')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru ws.aws s3 sync @('assets.local') @('assets.remote')
+
+command('frontend build'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru docker-compose exec -u build console bash -i -c 'app build:frontend'
+
+command('frontend watch'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru docker-compose exec -u build console bash -i -c 'cd @('frontend.path'); @('frontend.watch')'
+
+command('frontend console'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|@
+    passthru docker-compose exec -u build console bash -i -c 'cd @('frontend.path'); bash'
+
+command('port <service>'):
+  env:
+    COMPOSE_PROJECT_NAME: = @('namespace')
+  exec: |
+    #!bash(workspace:/)|=
+    passthru docker port $(docker-compose ps -q ={input.argument('service')})

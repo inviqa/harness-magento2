@@ -1,0 +1,14 @@
+{{ if .Values.service.postgres }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.prefix }}postgres-pv-claim
+  labels:
+    app.service: {{ .Values.prefix }}postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+{{ end }}

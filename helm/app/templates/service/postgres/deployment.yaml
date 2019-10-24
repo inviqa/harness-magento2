@@ -1,0 +1,52 @@
+{{ if .Values.service.postgres }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.prefix }}postgres
+  labels:
+    app.service: {{ .Values.prefix }}postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.service: {{ .Values.prefix }}postgres
+  template:
+    metadata:
+      labels:
+        app.service: {{ .Values.prefix }}postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: {{ .Values.environment.DB_NAME }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.environment.DB_PASS }}
+        - name: POSTGRES_USER
+          value: {{ .Values.environment.DB_USER }}
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        image: postgres:9.6
+        imagePullPolicy: Always
+        name: postgres
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            memory: {{ .Values.resources.limits.memory.postgres }}
+          requests:
+            memory: {{ .Values.resources.requests.memory.postgres }}
+        readinessProbe:
+          tcpSocket:
+            port: 5432
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: {{ .Values.prefix }}postgres-persistent-storage
+          mountPath: /var/lib/postgresql/data
+      restartPolicy: Always
+      volumes:
+      - name: {{ .Values.prefix }}postgres-persistent-storage
+        persistentVolumeClaim:
+          claimName: {{ .Values.prefix }}postgres-pv-claim
+status: {}
+{{ end }}

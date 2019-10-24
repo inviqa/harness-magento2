@@ -1,0 +1,17 @@
+{{ if .Values.service.redis_session }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.service: {{ .Values.prefix }}redis-session
+  name: {{ .Values.prefix }}redis-session
+spec:
+  ports:
+  - name: "6379"
+    port: 6379
+    targetPort: 6379
+  selector:
+    app.service: {{ .Values.prefix }}redis-session
+status:
+  loadBalancer: {}
+{{ end }}

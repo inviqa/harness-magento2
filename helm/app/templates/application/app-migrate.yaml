@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.resourcePrefix }}app-migrate
+  annotations:
+    helm.sh/hook: "pre-upgrade"
+    helm.sh/hook-delete-policy: "before-hook-creation"
+spec:
+  template:
+    spec:
+      containers:
+      - env:
+        {{- range $key, $value := index .Values.docker.services "php-base" "environment" }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- range $key, $value := .Values.docker.services.console.environment }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- range $key, $value := .Values.environment }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        image: {{ .Values.docker.image.console }}
+        imagePullPolicy: Always
+        name: app-migrate
+{{ if eq .Values.ingress "istio" }}
+        command: ["/bin/sh"]
+        args: ["-c", "app migrate ; code=$? ; curl -vv -XPOST http://127.0.0.1:15020/quitquitquit ; exit $code"]
+{{ else }}
+        command: ["app", "migrate"]
+{{ end }}
+        resources:
+          limits:
+            memory: {{ .Values.resources.limits.memory.app_migrate }}
+          requests:
+            memory: {{ .Values.resources.requests.memory.app_migrate }}
+      imagePullSecrets:
+      - name: {{ .Values.resourcePrefix }}docker-config
+      restartPolicy: Never

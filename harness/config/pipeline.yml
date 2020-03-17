@@ -1,0 +1,67 @@
+
+command('app build'): |
+  #!bash(workspace:/)|@
+  ws app build console
+  ws app build php-fpm
+  ws app build nginx
+
+command('app build console'): |
+  #!bash(workspace:/)|@
+  passthru docker build --pull -t @('docker.repository'):@('app.version')-console -f .my127ws/docker/image/console/Dockerfile .
+
+command('app build cron'): |
+  #!bash(workspace:/)|@
+  passthru docker build -t @('docker.repository'):@('app.version')-cron -f .my127ws/docker/image/cron/Dockerfile .
+
+command('app build php-fpm'): |
+  #!bash(harness:/docker/image/php-fpm)|@
+  passthru docker build -t @('docker.repository'):@('app.version')-php-fpm .
+
+command('app build nginx'): |
+  #!bash(harness:/docker/image/nginx)|@
+  passthru docker build -t @('docker.repository'):@('app.version')-nginx .
+
+command('app publish'): |
+  #!bash(workspace:/)|@
+  run docker login -u="@('docker.username')" -p="@('docker.password')" @('docker.repository')
+  run docker push @('docker.repository'):@('app.version')-console
+  run docker push @('docker.repository'):@('app.version')-php-fpm
+  run docker push @('docker.repository'):@('app.version')-nginx
+  run docker logout @('docker.repository')
+
+command('app deploy <environment>'):
+  env:
+    ENVIRONMENT: = input.argument('environment')
+    NAMESPACE:   = @('pipeline.' ~ input.argument('environment') ~ '.namespace')
+    CLUSTER:     = @('pipeline.' ~ input.argument('environment') ~ '.cluster.name')
+    TIMEOUT:     = @('helm.timeout')
+  exec: |
+    #!bash(harness:/helm)|=
+    cd "${ENVIRONMENT}"
+    doctl -t $DO_ACCESS_TOKEN kubernetes cluster kubeconfig show $CLUSTER > kubectl.config.yaml
+    passthru helm init --client-only
+    passthru helm dependency build
+    passthru helm --kubeconfig=$PWD/kubectl.config.yaml upgrade --wait --atomic --install --timeout "${TIMEOUT}" --namespace "${NAMESPACE}" "${NAMESPACE}" ./
+
+command('helm template <chart-path>'):
+  env:
+    CHART_PATH:  = input.argument('chart-path')
+    NAMESPACE:   = @('pipeline.' ~ input.argument('environment') ~ '.namespace')
+  exec: |
+    #!bash(harness:/helm)|=
+    cd "${CHART_PATH}"
+    passthru helm init --client-only
+    passthru helm dependency build
+    passthru helm template .
+
+command('helm kubeval <chart-path>'):
+  env:
+    CHART_PATH: = input.argument('chart-path')
+    NAMESPACE: = @('pipeline.' ~ input.argument('environment') ~ '.namespace')
+  exec: |
+    #!bash(harness:/helm)|=
+    cd "${CHART_PATH}"
+    passthru helm init --client-only
+    passthru helm dependency build
+    passthru helm plugin install https://github.com/instrumenta/helm-kubeval || true
+    helm kubeval .

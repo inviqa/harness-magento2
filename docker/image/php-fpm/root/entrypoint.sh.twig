@@ -1,0 +1,16 @@
+#!/bin/bash
+
+run_steps()
+{
+    echo "pm.status_path = /status" >> /usr/local/etc/php-fpm.d/www.conf
+
+    # run any command required to be executed at docker startup
+    {% for step in @('php-fpm.entrypoint.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+}
+
+run_steps
+
+# run
+exec supervisord -c /etc/supervisor/supervisord.conf -n

@@ -1,0 +1,92 @@
+attributes:
+  services:
+    php-base:
+      environment:
+        HOST_OS_FAMILY: = @('host.os')
+        APP_NAME: = @('workspace.name')
+        APP_HOST: = @('hostname')
+        DB_PLATFORM: = @('database.platform')
+        DB_HOST: = @('database.host')
+        DB_USER: = @('database.user')
+        DB_PASS: = @('database.pass')
+        DB_NAME: = @('database.name')
+        PHP_IDE_CONFIG: "serverName=workspace"
+    nginx:
+      environment:
+        FPM_HOST: php-fpm
+    console:
+      enabled: true
+      environment:
+        DB_ADMIN_USER: root
+        DB_ADMIN_PASS: = @('database.root_pass')
+    php-fpm:
+      environment: 
+        AUTOSTART_PHP_FPM: "true"
+    php-fpm-exporter:
+      environment:
+        PHP_FPM_SCRAPE_URI: tcp://php-fpm:9000/status
+    mysql:
+      environment:
+        MYSQL_DATABASE: = @('database.name')
+        MYSQL_PASSWORD: = @('database.pass')
+        MYSQL_ROOT_PASSWORD: = @('database.root_pass')
+        MYSQL_USER: = @('database.user')
+    postgres:
+      environment:
+        POSTGRES_DB: = @('database.name')
+        POSTGRES_PASSWORD: = @('database.pass')
+        POSTGRES_USER: = @('database.user')
+        PGDATA: /var/lib/postgresql/data/pgdata
+    cron:
+      environment: []
+  pipeline:
+    base:
+      prometheus:
+        podMonitoring: false
+      services:
+        php-base:
+          environment:
+            ES_HOST: "{{ if .Values.service.elasticsearch }}{{ .Values.resourcePrefix }}elasticsearch:9200{{ end }}"
+            DB_HOST: = '{{ .Values.resourcePrefix }}' ~ @('database.host')
+            APP_HOST: = @('pipeline.base.hostname')
+            PHP_IDE_CONFIG: = ''
+        nginx:
+          environment:
+            FPM_HOST: localhost
+          metricsEnabled: false
+          metricsEndpoints:
+            - port: http
+        php-fpm-exporter:
+          environment:
+            PHP_FPM_SCRAPE_URI: tcp://127.0.0.1:9000/status
+          metricsEnabled: true
+          metricsEndpoints:
+            - port: php-fpm-metrics
+      istio:
+        gateways:
+          - "istio-system/{{ .Release.Namespace }}-gateway"
+        additionalGateways: []
+    production: {}
+    qa:
+      services:
+        php-base:
+          environment:
+            APP_HOST: = @('pipeline.qa.hostname')
+    preview:
+      resources:
+        memory:
+          app_init: "1024Mi"
+          app_migrate: "1024Mi"
+          console: "1024Mi"
+          cron: "1024Mi"
+          elasticsearch: "1024Mi"
+          mysql: "512Mi"
+          nginx: "64Mi"
+          php_fpm: "1024Mi"
+          php_fpm_exporter: "32Mi"
+          postgres: "512Mi"
+          redis: "64Mi"
+          redis_session: "64Mi"
+      services:
+        console:
+          enabled: false

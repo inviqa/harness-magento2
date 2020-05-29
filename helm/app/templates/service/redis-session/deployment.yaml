@@ -1,0 +1,51 @@
+{{ if .Values.service.redis_session }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.resourcePrefix }}redis-session
+  labels:
+    app.service: {{ .Values.resourcePrefix }}redis-session
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.service: {{ .Values.resourcePrefix }}redis-session
+  template:
+    metadata:
+      labels:
+        app.service: {{ .Values.resourcePrefix }}redis-session
+    spec:
+      containers:
+      - args:
+        - redis-server
+        - --maxmemory
+        - "1073742000"
+        - --maxmemory-policy
+        - volatile-ttl
+        - --save
+        - "3600"
+        - "1"
+        - --save
+        - "300"
+        - "100"
+        - --save
+        - "60"
+        - "10000"
+        image: redis:4-alpine
+        imagePullPolicy: Always
+        name: redis-session
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            memory: {{ .Values.resources.memory.redis_session }}
+          requests:
+            memory: {{ .Values.resources.memory.redis_session }}
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      restartPolicy: Always
+status: {}
+{{ end }}

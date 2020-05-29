@@ -1,0 +1,14 @@
+
+attributes:
+  namespace: =exec("git log -n 1 --pretty=format:'%H'")
+  hostname: =@('workspace.name') ~ '.' ~ @('domain')
+  app:
+    build: static
+    version: =exec("git log -n 1 --pretty=format:'%H'")
+    mode: production
+  php:
+    fpm:
+      ini:
+        display_errors: Off
+        error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+        zend.assertions: -1

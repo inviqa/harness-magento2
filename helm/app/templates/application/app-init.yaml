@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.resourcePrefix }}app-init
+  annotations:
+    helm.sh/hook: "post-install"
+    helm.sh/hook-delete-policy: "before-hook-creation"
+    argocd.argoproj.io/hook: "Sync"
+    argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - env:
+        {{- range $key, $value := index .Values.docker.services "php-base" "environment" }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := .Values.docker.services.console.environment }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := .Values.environment }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        image: {{ .Values.docker.image.console }}
+        imagePullPolicy: Always
+        name: app-init
+{{ if eq .Values.ingress "istio" }}
+        command: ["/bin/sh"]
+        args: ["-c", "app init ; code=$? ; curl -vv -XPOST http://127.0.0.1:15020/quitquitquit ; exit $code"]
+{{ else }}
+        command: ["app", "init"]
+{{ end }}
+        resources:
+          limits:
+            memory: {{ .Values.resources.memory.app_init }}
+          requests:
+            memory: {{ .Values.resources.memory.app_init }}
+        volumeMounts:
+        {{- if not (eq "" (include "application.volumeMounts.console" .)) }}
+        {{- include "application.volumeMounts.console" . | indent 8 }}
+        {{- else }} []
+        {{- end }}
+      imagePullSecrets:
+      - name: {{ .Values.resourcePrefix }}docker-config
+      restartPolicy: Never
+      enableServiceLinks: false
+      volumes:
+      {{- if not (eq "" (include "application.volumes.console" .)) }}
+      {{- include "application.volumes.console" . | indent 6 }}
+      {{- else }} []
+      {{- end }}

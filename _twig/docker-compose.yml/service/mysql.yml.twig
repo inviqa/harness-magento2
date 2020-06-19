@@ -1,0 +1,17 @@
+{% set command = [] %}
+{% for var,value in @('database.var') -%}
+    {% set command = command|merge(['--' ~ var ~ '=' ~ value]) %}
+{% endfor %}
+  mysql:
+    image: {{ @('mysql.image') }}:{{ @('mysql.tag') }}
+    labels:
+      - traefik.enable=false
+{% if command|length %}
+    command: {{ command|join(' ') }}
+{% endif %}
+    environment:
+{{ to_nice_yaml(@('services.mysql.environment'), 2, 6) | raw }}
+    networks:
+      - private
+    ports:
+      - {% if @('database.port_forward') %}{{ @('database.port_forward') }}:{% endif %}3306

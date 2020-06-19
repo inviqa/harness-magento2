@@ -1,0 +1,75 @@
+{{ if .Values.docker.services.console.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.resourcePrefix }}console
+  labels:
+    app.service: {{ .Values.resourcePrefix }}console
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.service: {{ .Values.resourcePrefix }}console
+  template:
+    metadata:
+      labels:
+        app.service: {{ .Values.resourcePrefix }}console
+    spec:
+      containers:
+      - env:
+        {{- range $key, $value := index .Values.docker.services "php-base" "environment" }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else}}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := .Values.docker.services.console.environment }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else}}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := .Values.environment }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        image: {{ .Values.docker.image.console }}
+        imagePullPolicy: Always
+        name: console
+        resources:
+          limits:
+            memory: {{ .Values.resources.memory.console }}
+          requests:
+            memory: {{ .Values.resources.memory.console }}
+        readinessProbe:
+          exec:
+            command:
+            - app
+            - state
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts:
+        {{- if not (eq "" (include "application.volumeMounts.console" .)) }}
+        {{- include "application.volumeMounts.console" . | indent 8 }}
+        {{- else }} []
+        {{- end }}
+      imagePullSecrets:
+      - name: {{ .Values.resourcePrefix }}docker-config
+      restartPolicy: Always
+      enableServiceLinks: false
+      volumes:
+      {{- if not (eq "" (include "application.volumes.console" .)) }}
+      {{- include "application.volumes.console" . | indent 6 }}
+      {{- else }} []
+      {{- end }}
+status: {}
+{{ end }}

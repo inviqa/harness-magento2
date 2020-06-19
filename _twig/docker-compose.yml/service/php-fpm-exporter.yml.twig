@@ -1,0 +1,10 @@
+  php-fpm-exporter:
+    image: hipages/php-fpm_exporter
+    environment: 
+{{ to_nice_yaml(@('services.php-fpm-exporter.environment'), 2, 6) | raw }}
+    labels:
+      - traefik.enable=false
+    depends_on:
+      - php-fpm
+    networks:
+      - private

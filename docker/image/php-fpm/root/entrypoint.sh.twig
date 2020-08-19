@@ -1,0 +1,18 @@
+#!/bin/bash
+
+run_steps()
+{
+    {% for poolName, pool in @('php-fpm.pools') -%}
+    FPM_NAME="{{ poolName }}" FPM_PORT="{{ pool.port }}" envsubst < /usr/local/etc/php-fpm.d/pool.conf.template > /usr/local/etc/php-fpm.d/{{ poolName }}.conf;
+    {% endfor %}
+    
+    # run any command required to be executed at docker startup
+    {% for step in @('php-fpm.entrypoint.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+}
+
+run_steps
+
+# run
+exec supervisord -c /etc/supervisor/supervisord.conf -n

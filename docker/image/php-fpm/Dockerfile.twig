@@ -1,0 +1,37 @@
+{% if @('app.build') == 'static' %}
+FROM {{ @('docker.repository') ~ ':' ~ @('app.version') }}-console as console
+RUN if [ -d /app/tools/assets/ ]; then rm -rf /app/tools/assets/; fi
+RUN if [ -d {{ @('frontend.path') }}/node_modules/ ]; then rm -rf {{ @('frontend.path') }}/node_modules/; fi
+{% endif %}
+
+FROM {{ @('docker.image.php-fpm') }}
+WORKDIR /app
+COPY root  /
+
+RUN curl --fail --silent --location --output /sbin/tini https://github.com/krallin/tini/releases/download/v0.19.0/tini \
+ && chmod +x /sbin/tini \
+ && curl --fail --silent --location --output /usr/local/bin/mhsendmail https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mhsendmail_linux_amd64 \
+ && chmod +x /usr/local/bin/mhsendmail
+{%- set install_extensions=@('php.install_extensions')|merge(@('php.fpm.install_extensions'))|filter(v => v is not empty) %}
+{%- if install_extensions %} \
+ && cd /root/installer \
+ && ./enable.sh \
+    {{ install_extensions|join(" \\\n    ") }}
+{% endif %}
+
+{% if @('app.build') == 'static' %}
+COPY --from=console --chown=root:root /app /app
+RUN bash /fix_app_permissions.sh
+{% else %}
+VOLUME /app
+{% endif %}
+ENV APP_MODE {{ @('app.mode') }}
+
+{% if @('app.build') == 'static' %}
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["sleep", "infinity"]
+{% else %}
+ENTRYPOINT ["/entrypoint.dynamic.sh"]
+CMD ["sleep", "infinity"]
+{% endif %}

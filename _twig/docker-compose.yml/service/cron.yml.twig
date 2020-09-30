@@ -1,0 +1,22 @@
+  cron:
+    build:
+      context: ./
+      dockerfile: .my127ws/docker/image/cron/Dockerfile
+{% if @('app.build') == 'dynamic' %}
+    volumes:
+      - {{ (syncvolume) ? @('workspace.name') ~ '-sync:/app:nocopy' : ('./:/app' ~ @('docker.compose.host_volume_options')) }}
+      - ./.my127ws/application:/home/build/application
+{% else %}
+    image: {{ @('services.cron.image') }}
+{% endif %}
+    environment: {{ to_nice_yaml(deep_merge([
+        @('services.php-base.environment'),
+        @('services.cron.environment'),
+        @('services.php-base.environment_secrets'),
+        @('services.cron.environment_secrets')
+      ]), 2, 6) | raw }}
+{% include blocks ~ 'environment.yml.twig' %}
+    networks:
+      - private
+    labels:
+      - traefik.enable=false

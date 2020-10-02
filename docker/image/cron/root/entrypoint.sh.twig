@@ -1,0 +1,42 @@
+#!/bin/bash
+
+setup_app_networking()
+{
+    # make linux consistent with docker-for-mac
+    if [ "${HOST_OS_FAMILY}" = "linux" ]; then
+        DOCKER_INTERNAL_HOST="host.docker.internal"
+        if ! grep $DOCKER_INTERNAL_HOST /etc/hosts > /dev/null ; then
+            DOCKER_INTERNAL_IP=$(/sbin/ip route|awk '/default/ { print $3 }')
+            echo -e "$DOCKER_INTERNAL_IP    $DOCKER_INTERNAL_HOST" | tee -a /etc/hosts > /dev/null
+        fi
+    fi
+}
+
+run_steps()
+{
+    # run any command required to be executed at docker startup
+    {% for step in @('cron.entrypoint.steps') -%}
+    {{ step|raw }}
+    {% else -%}
+    :
+    {% endfor %}
+}
+
+dump_environment_variables()
+{
+    # this is used to load env vars in crontab commands
+    env > /app/env.sh
+}
+
+bootstrap()
+{
+    setup_app_networking
+    run_steps
+    dump_environment_variables
+}
+
+bootstrap
+
+# run
+crontab /crontab
+exec /sbin/tini -- cron -f -L 15

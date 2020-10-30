@@ -1,0 +1,17 @@
+{{ if .Values.service.redis_session | default .Values.docker.services.redis_session.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.service: {{ .Values.resourcePrefix }}redis-session
+  name: {{ .Values.resourcePrefix }}redis-session
+spec:
+  ports:
+  - name: "6379"
+    port: 6379
+    targetPort: 6379
+  selector:
+    app.service: {{ .Values.resourcePrefix }}redis-session
+status:
+  loadBalancer: {}
+{{ end }}

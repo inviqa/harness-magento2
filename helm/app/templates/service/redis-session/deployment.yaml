@@ -1,0 +1,74 @@
+{{- with .Values.docker.services.redis_session -}}
+{{- if $.Values.service.redis_session | default .enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Values.resourcePrefix }}redis-session
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    {{- include "chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: redis-session
+    app.service: {{ $.Values.resourcePrefix }}redis-session
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.service: {{ $.Values.resourcePrefix }}redis-session
+{{- if $.Values.persistence.redis_session.enabled }}
+  strategy:
+    type: Recreate
+{{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectors" $ | nindent 8 }}
+        app.kubernetes.io/component: redis-session
+        app.service: {{ $.Values.resourcePrefix }}redis-session
+    spec:
+      containers:
+      - args:
+        - redis-server
+        - --maxmemory
+        - "1073742000"
+        - --maxmemory-policy
+        - volatile-ttl
+        - --save
+        - "3600"
+        - "1"
+        - --save
+        - "300"
+        - "100"
+        - --save
+        - "60"
+        - "10000"
+        image: {{ .image | quote }}
+        imagePullPolicy: Always
+        name: redis-session
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            memory: {{ $.Values.resources.memory.redis_session | default .resources.memory }}
+          requests:
+            memory: {{ $.Values.resources.memory.redis_session | default .resources.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: {{ $.Values.resourcePrefix }}redis-session-persistent-storage
+          mountPath: /data
+      restartPolicy: Always
+      volumes:
+      - name: {{ $.Values.resourcePrefix }}redis-session-persistent-storage
+{{- if $.Values.persistence.redis_session.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ $.Values.resourcePrefix }}redis-session-pv-claim
+{{- else }}
+        emptyDir: {}
+{{- end }}
+status: {}
+{{- end }}
+{{- end }}

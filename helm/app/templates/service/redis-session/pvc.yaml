@@ -1,0 +1,33 @@
+{{ if and .Values.persistence.redis_session.enabled (.Values.service.redis_session | default .Values.docker.services.redis_session.enabled) -}}
+
+{{- with .Values.persistence.redis_session -}}
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ $.Values.resourcePrefix }}redis-session-pv-claim
+  labels:
+    {{- include "chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: redis-session
+    app.service: {{ $.Values.resourcePrefix }}redis-session
+spec:
+  accessModes:
+    - {{ .accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .size | quote }}
+{{- if .storageClass }}
+{{- if (eq "-" .storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: {{ .storageClass | quote }}
+{{- end }}
+{{- end }}
+{{- if .selector }}
+  selector:
+  {{- .selector | toYaml | nindent 4 }}
+{{- end }}
+
+{{- end }}
+
+{{- end }}

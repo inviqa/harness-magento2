@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+main()
+{
+    local IS_BUILT=no
+    local HAS_FLAG=no
+
+    if [ -f .my127ws/.flag-built ]; then
+        HAS_FLAG=yes
+        IS_BUILT=yes
+        # If no lines for `docker-compose ps`, the containers no longer exist so we need to rebuild them
+        if [ "$(docker-compose ps --quiet | wc -l | awk '{ print $1 }')" = "0" ]; then
+            IS_BUILT=no
+        fi
+    fi
+
+    passthru ws networks external
+    if [ "$IS_BUILT" = "no" ]; then
+        if [ "$HAS_FLAG" = "no" ]; then
+          passthru docker-compose down
+        fi
+
+        if [[ "$HAS_ASSETS" = "yes" ]]; then
+            ws assets download
+        fi
+
+        $APP_BUILD
+        touch .my127ws/.flag-built
+
+    else
+        passthru docker-compose up -d
+        passthru docker-compose exec -T -u build console app welcome
+    fi
+
+    if [[ "$APP_BUILD" = "dynamic" && "$USE_MUTAGEN" = "yes" ]]; then
+        passthru ws mutagen resume
+    fi
+}
+
+dynamic()
+{
+    # we synchronise then stop mutagen to avoid impacting CPU usage during the build
+
+    if [[ "$USE_MUTAGEN" = "yes" ]]; then
+        passthru ws mutagen start
+        passthru ws mutagen pause
+    fi
+
+    ws external-images pull
+
+    find .my127ws/docker/image/ -type d ! -perm u+rwx,go+rx,o-w -exec chmod u+rwx,go+rx,o-w {} +
+
+    passthru "docker-compose config --services | grep -v cron | grep -v jenkins-runner | grep -v job-queue-consumer | xargs docker-compose build"
+
+    {% if @('services.cron.enabled') %}
+        passthru docker-compose build cron
+    {% endif %}
+    {% if @('services.jenkins-runner.enabled') %}
+        passthru docker-compose build jenkins-runner
+    {% endif %}
+    {% if @('services.job-queue-consumer.enabled') %}
+        passthru docker-compose build job-queue-consumer
+    {% endif %}
+
+    # Bring up console to fix file permissions
+    passthru docker-compose up -d console
+
+    # Bring up all services apart from cron, jenkins-runner and job-queue-consumer
+    passthru "docker-compose config --services | grep -v cron | grep -v jenkins-runner | xargs docker-compose up -d"
+
+    passthru docker-compose exec -T -u build console app build
+    passthru docker-compose exec -T -u build console app init
+
+    # Bring up all services
+    passthru docker-compose up -d
+}
+
+static()
+{
+    ws app build
+
+    {% if @('services.cron.enabled') %}
+        # Bring up all but cron
+        passthru "docker-compose config --services | grep -v cron | xargs docker-compose up -d"
+    {% else %}
+        # Bring up all services
+        passthru docker-compose up -d
+    {% endif %}
+
+    passthru docker-compose exec -T -u build console app init
+
+    {% if @('services.cron.enabled') %}
+    passthru docker-compose up -d cron
+    {% endif %}
+}
+
+main

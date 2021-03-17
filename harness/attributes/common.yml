@@ -1,0 +1,433 @@
+
+
+attributes.default:
+
+  app:
+    # build - static|dynamic
+    #   dynamic - volumes are mounted and the build step is run once the containers have started
+    #   static  - app is copied into console, built, then the resulting build is copied into the web image
+    build: dynamic
+
+    # mode - development|production
+    #   development - additional tooling is made available and application is run in development mode
+    #   production  - leaner images with less tooling and application is run in production mode
+    mode: development
+
+    services: [mysql]
+    web_owner: www-data
+    web_group: www-data
+    web_writable_dirs: []
+    web_writable_files: []
+
+    web_directory: /app/public
+    vendor_directory: /app/vendor
+
+  delegated-volumes: no
+  docker-sync: no
+  mutagen: yes
+
+  jenkins:
+    credentials:
+      my127ws_key: = @('workspace.name') ~ '-my127ws-key'
+
+  pipeline:
+    base:
+      persistence: = @('persistence')
+      resourcePrefix: ~
+      hostname:  = @('pipeline.preview.hostname')
+    publish:
+      enabled: no
+      services: = publishable_services(@('services'))
+      # branches that should publish (other than change requests and qa)
+      # * is deprecated and will be limited to one branch by default in a future release
+      branches:
+        - '*'
+      # For defining environment variables in Jenkins, e.g. loading up docker username/password from a Jenkins
+      # credential
+      environment: {}
+      # when enabled the application helm chart will be published
+      # to the given git repository.
+      chart:
+        enabled: no
+        git:
+          key: ~ # deprecated, use ssh_private_key
+          # private key with write access to the repository
+          ssh_private_key: = @('pipeline.publish.chart.git.key')
+          # eg. git@github.com:organisation/project.git
+          repository: ~
+          # path within the repository to place the chart, no leading or trailing slashes
+          # note: an additional directory with the branch name will be created
+          path: = 'build-artifacts/' ~ @('workspace.name')
+          # sets the git user.email before pushing the commit
+          email: name@example.com
+    preview:
+      enabled: no
+      target_branches:
+        - = @('git.default_branch')
+      environment: {}
+      cluster:
+        name: null
+      namespace: = @('workspace.name') ~ '-' ~ slugify(branch())
+      hostname:  = @('pipeline.preview.namespace') ~ '.example.com'
+      rabbitmq:
+        external_host: = 'rabbitmq-' ~ @('pipeline.preview.hostname')
+      smtp:
+        host: mailhog.mailhog.svc.cluster.local
+        port: = @('smtp.port')
+      persistence:
+        redis_session:
+          enabled: false
+    qa:
+      enabled: no
+      environment: {}
+      branch: develop
+      cluster:
+        name: null
+      namespace: = @('workspace.name') ~ '-' ~ 'qa'
+      hostname: = @('pipeline.qa.namespace') ~ '.example.com'
+      resourcePrefix: ~
+      persistence: ~
+      rabbitmq:
+        external_host: = 'rabbitmq-' ~ @('pipeline.qa.hostname')
+      smtp:
+        host: mailhog.mailhog.svc.cluster.local
+        port: = @('smtp.port')
+
+  docker:
+    registry:
+      url: = get_docker_registry(@('docker.repository'))
+      username: = @('docker.username') # for backwards compatibility
+      password: = @('docker.password') # for backwards compatibility
+    repository: = @("workspace.name")
+    compose:
+      file_version: '3.7'
+      host_volume_options: "= ':' ~ (@('delegated-volumes') ? 'delegated' : 'cached')"
+    config: null # deprecated
+    # If using gitops helm chart repositories, it's recommended to put this configuration
+    # in the values.yml in there now instead of project application repositories
+    image_pull_config: = @('docker.config')
+    image:
+      console: "= 'my127/php:' ~ @('php.version') ~ '-fpm-' ~ (@('php.version') >= 7.4 ? 'buster' : 'stretch') ~ '-console'"
+      php-fpm: "= 'my127/php:' ~ @('php.version') ~ '-fpm-' ~ (@('php.version') >= 7.4 ? 'buster' : 'stretch')"
+    port_forward:
+      enabled: "= @('app.build') == 'dynamic'"
+  composer:
+    auth:
+      basic: ~
+      github: ~
+
+  backend:
+    path: /app
+    build:
+      when: -f "composer.json"
+      steps:
+        - task composer:install
+    install:
+      steps: []
+    init:
+      steps: []
+    migrate:
+      steps: []
+    cron:
+      jobs: []
+
+  framework:
+    readme_blocks: []
+
+  frontend:
+    path: /app
+    watch: npm run watch
+    build:
+      when: -f "package.json"
+      steps:
+        - |
+          if [ "$APP_BUILD" == "static" ] && [ -f package-lock.json ]; then
+            run npm clean-install
+          else
+            run npm install
+          fi
+        - |
+          if [ "$(jq ".scripts.build != null" < package.json)" != "false" ]; then
+            run npm run build
+          fi
+        - |
+          if [ "$APP_BUILD" == "static" ]; then
+            run rm -rf node_modules/
+            run npm cache clean --force
+          fi
+
+  git:
+    default_branch: = @('git.main_branch')
+    # potentially deprecated, unless it is repurposed
+    main_branch: develop
+
+  nginx:
+    # used to set site specific configurations under server directive
+    site:
+      conf: []
+    # used to set nginx global configurations under http directive
+    global:
+      conf: []
+    # used to limit what is copied into an Nginx static-built image
+    copy_directories:
+     - = @('app.web_directory')
+    php_fpm:
+      conf: []
+
+  node:
+    # only set this attribute if you wish to override the supplied node version, by default
+    # the supplied version will be the current LTS.
+    version: null
+
+  php:
+    version: 7.4
+    cli:
+      ini:
+        max_execution_time: 0
+        memory_limit: -1
+      install_extensions: []
+    entrypoint:
+      steps: []
+    fpm:
+      ini:
+        disable_functions: pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals
+        expose_php: Off
+        log_errors: On
+        max_execution_time: 30
+        max_input_time: 60
+        memory_limit: 1024M
+        output_buffering: 4096
+        register_argc_argv: Off
+        request_order: GP
+        variables_order: GPCS
+      install_extensions: []
+    ini:
+      enable_dl: Off
+      error_reporting: "E_ALL"
+      opcache.enable_cli: On
+      realpath_cache_ttl: 600
+      sendmail_path: /usr/local/bin/send_mail
+      short_open_tag: Off
+    install_extensions:
+      - "= @('services.blackfire.enabled') ? 'blackfire' : ''"
+      - "= @('services.tideways.enabled') ? 'tideways' : ''"
+    ext-blackfire:
+      enable: no
+      cli:
+        enable: no
+      config:
+        agent_socket: "tcp://blackfire:8707"
+    ext-tideways:
+      enable: "= @('services.tideways.enabled')"
+      cli:
+        enable: "= @('services.tideways.enabled')"
+      config:
+        connection: "tcp://tideways:9135"
+        collect: tracing
+        sample_rate: 25
+        service: web
+    ext-xdebug:
+      enable: no
+      cli:
+        enable: no
+      config:
+        remote_enable: 1
+        remote_autostart: 1
+        remote_port: 9000
+        remote_host: host.docker.internal
+        idekey: workspace
+
+  assets:
+    remote: ="s3://"~@("aws.bucket")~"/development"
+    local: tools/assets/development
+
+  cron:
+    entrypoint:
+      steps: []
+
+  console:
+    entrypoint:
+      steps: []
+
+  database:
+    # possible platforms are mysql, postgres or ~ for none
+    platform: mysql
+    platform_version: 5.7
+    host: mysql
+    port: 3306
+    user: app
+    pass: app
+    name: app
+    root_pass: DV6RdNY3QcFsBk7V
+    port_forward: ~
+    var:
+      default_authentication_plugin: "= (@('database.platform') == 'mysql' && @('database.platform_version') >= 8.0 && @('database.platform_version') < 10.0 ? 'mysql_native_password' : '')"
+      ignore-db-dir: "= (@('database.platform') == 'mysql' && @('database.platform_version') < 8.0 ? 'lost+found' : '')"
+      max_allowed_packet: 4M
+    import:
+      steps: []
+
+  elasticsearch:
+    host: elasticsearch
+    image: elasticsearch
+    port: 9200
+    tag: 7.1.1
+
+  domain: my127.site
+  hostname: = @('namespace') ~ '.' ~ @('domain')
+  hostname_aliases: []
+
+  helm:
+    additional_schema_locations: https://inviqa.github.io/kubernetes-json-schema/schema
+    feature:
+      # Note: be very careful considering disabling this, as in most cases
+      # it causes the secrets in it to be stored plaintext on filesystem
+      # or in helm chart repositories
+      # requires sealed-secrets k8s operator
+      sealed_secrets: false
+    timeout: 300
+
+    sealed_secrets:
+      # location of the sealed-secret service to download the active certificate from
+      controller_name: sealed-secrets
+      controller_namespace: sealed-secrets
+      # Use local file (or fetch from http url) as the certificate
+      # If null, it will be fetched from the controller in the current kubectl context
+      certificate_file: ~
+      # A namespace the secret should be only decryptable by
+      # Ignored if scope is cluster-wide.
+      # If null, it will be fetched from the current kubectl context
+      namespace: ~
+      # The scope under which a secret can be decrypted
+      # Either cluster-wide, namespace-wide, or strict
+      scope: "= @('helm.sealed_secrets.namespace') ? 'namespace-wide' : 'cluster-wide'"
+
+  php-fpm:
+    pools:
+      www:
+        port: 9000
+    entrypoint:
+      steps: []
+
+  mysql:
+    image: mysql
+    tag: 5.7
+
+  rabbitmq:
+    image: rabbitmq
+    tag: 3.8-management-alpine
+    api_port: 15672
+    erlang_cookie: TeTTiwT9y548yIcfw4peaOrqgtLItD6B
+    external_host: = 'rabbitmq-' ~ @('hostname')
+    host: rabbitmq
+    port: 5672
+    user: rabbitmq
+    password: rabbitmq
+    vhosts:
+      default: '/'
+
+  redis:
+    host: redis
+    port: 6379
+
+  redis_session:
+    host: redis-session
+    port: 6379
+
+  smtp:
+    host: 'mailhog-relay'
+    port: 1025
+
+  varnish:
+    target_service: nginx
+
+  resources:
+    cpu:
+      requests: []
+      limits: []
+    memory:
+      app_init: "1024Mi"
+      app_migrate: "1024Mi"
+
+  replicas:
+    varnish: 1
+
+  persistence:
+    enabled: false
+    mountVolumesOnConsole: true # possible to disable, but may lead to unexpected concequences with app init/migrate
+
+    elasticsearch:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    mysql:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 4Gi
+    rabbitmq:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    postgres:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 4Gi
+    redis:
+      enabled: false
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    redis_session:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 2Gi
+
+  tls:
+    key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC9q3EMGDtDNKAt
+      CHyM1MfWUaIGsv5Zka7pfjIOKL/KvrSIVpZyyJ3lSALeRyyDDRZeYwkbkNdDJgir
+      FmD0vJkYifYWfGdIJmbjdm62LGyzDf79Ve8aQF0lLcedMhoCfu7+qciIYnjHdvkx
+      Y6Fo9CTZP7m+oSNmUjHdJD3scX4l3vodBK67Hpk+W2eEhwAxG5aFsspDnPi4L9ha
+      KlMps+eSn1hLLGYrmthtP2assckvdyL10hS7+OOZFmj5vxGNbQn2F4whiu06JmXL
+      oO8T9yd8XNN383FjREYKjrQcyJo3izvawEgrRi9mNKM9DhWuBdbYNe/cSgGfwBK6
+      Kc9e8zCLAgMBAAECggEAVL6fOgoxoGuJDdX24G3KBCZhQKEFKDwBbO4nq0/lsc7X
+      lvspKYwdkG5Gac5fQwa78dxKG3jx1VzPDrJnC7KgrOgnfhCDjScrXYJzIQ5kWvRr
+      9AFLXe1YMN5ti/zwxiC05DA0G0v0LxsnaDvdyKkdNbxVX6lbycH76ZTh3h0vgfeD
+      Wc8MMlRTa+ORWKoIZsm+qnNLhWQhhbmoA8LNkZqtJIOBZuyAu8vyXzrEFIhKqVzU
+      Jdz0S+xtgYUkoXCTgdYiqoFjlKhaIIV2Fc0vbc68ziIiu3ZtaVch7wNyftoXyjBr
+      hjI1GT1dr7NsQpPZ6xtqjGhIvUuVSeCSBZeeXkymAQKBgQDsxFb916gIxl3QQYPV
+      NiKPi3rZD5iuMTjy0937dhHWGGYlWW2GEE0XjWrmLUnGyLuxwA5kFgS0eMubbhTg
+      aeewHamHeN/pcJIF6HndJbqXLB148E8ux6grpQrHKpTb2RLOPkd6bAgn1SjPllCL
+      a/vVanevaJs8U27sKEfGND0aCwKBgQDNE7IzvD1JAUrzqzG9Lxg+NhaHQTQfW45W
+      cuHvESiyhc93kdufvcCTrrRRXSZOqDN26+64Ni62O/ulduq4qZmhG/lxqSz5mnpr
+      2oV2Kg1C1EUC4V2B9WQoMOhvOa0esTVSm9hC4oX0kYIzl6HbVAUGe8JMXOoKTJkV
+      3sAz0FbTgQKBgQC1CX+2wvIiG4NaHO4v1h/hAHajiDBnaQ2xZtzCTMpgmPFpt5Ju
+      QwKfcqt9ar2RuKUDyeV3E/ru/7o3k5l06qWUXWnmQz96oG+XAuZDeXjN5JZ4hc8V
+      5uYo0R6HoYCHBdlCSA6hhf9Kbcuxxq65nIzH54uyXNrt6qHTAw22ePULdwKBgQCK
+      vp+a1ukToldGQfV1zA330Pou6dNMv9Gt9S2cY5yII3W4rKrNCUDn6ZO/VGkdYDjp
+      ZTft02KJEk3vpWOqKbxxvo5l8pImEPhwTbhruImeRCSojTaJPS9U7bnjvj68/CFa
+      UWvf3IfKbkOLijQMQmzf9Q0AQwBolWgg3sJki7iigQKBgQCf82eve3W/s/pZzKGi
+      WWACcZLmDTHeH2AU3ZDfFaEAKObe/cdHMgk8MGewf1IF6QDQXtaxHlM5/FKQ1ohu
+      uoe7Xo1R+KlrVRxKAlNQ5lfzhAAgDNaOhpgkH4cehfPrIIh9rwNMSkHDRS0DELvY
+      DPyRumPy7zTg5YPzzl7tM1/OPA==
+      -----END PRIVATE KEY-----
+
+    crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIC6zCCAdOgAwIBAgIJAI4syJyPEWAMMA0GCSqGSIb3DQEBBQUAMAwxCjAIBgNV
+      BAMMASowHhcNMTgwNzI0MTE1MjQ0WhcNMTkwNzI0MTE1MjQ0WjAMMQowCAYDVQQD
+      DAEqMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvatxDBg7QzSgLQh8
+      jNTH1lGiBrL+WZGu6X4yDii/yr60iFaWcsid5UgC3kcsgw0WXmMJG5DXQyYIqxZg
+      9LyZGIn2FnxnSCZm43Zutixssw3+/VXvGkBdJS3HnTIaAn7u/qnIiGJ4x3b5MWOh
+      aPQk2T+5vqEjZlIx3SQ97HF+Jd76HQSuux6ZPltnhIcAMRuWhbLKQ5z4uC/YWipT
+      KbPnkp9YSyxmK5rYbT9mrLHJL3ci9dIUu/jjmRZo+b8RjW0J9heMIYrtOiZly6Dv
+      E/cnfFzTd/NxY0RGCo60HMiaN4s72sBIK0YvZjSjPQ4VrgXW2DXv3EoBn8ASuinP
+      XvMwiwIDAQABo1AwTjAdBgNVHQ4EFgQUK4SXDSeyVYbCWr31rz2K6GLRFoYwHwYD
+      VR0jBBgwFoAUK4SXDSeyVYbCWr31rz2K6GLRFoYwDAYDVR0TBAUwAwEB/zANBgkq
+      hkiG9w0BAQUFAAOCAQEAjz2PUbdi2S+h4UB3P2UBLdgDClkiSPF+gAqfw4D82faf
+      M8hpMuCcd3148dejU4tFPUdLx1MASK8ucCk7rcwVtafWPYU4nMDlmZ9Zj9F2Y8KY
+      dVfHfTIOblTSYc90g+nTFsTchkEFOH0nRZAKhCT3HphXNTZFNIQWoqe63SJZ8LTs
+      8RBO/zcoh5E31+Rm0WxKlYH4QElLp9dXAtKueWGTafh2E8Re96IS+Uig+yC3RIYJ
+      MWLcATwR3lSnqN2ifByic5VGWbRKkGNsh3wAWlejL2FGv8mLU1q8nLK36UcU/HzZ
+      ziLtpidJOJHDpyDSAxDSxcP9fJ6gssMQln92DJ/SUQ==
+      -----END CERTIFICATE-----

@@ -1,0 +1,21 @@
+{% set command = [] %}
+{% for var,value in @('database.var') -%}
+    {% set command = command|merge(['--' ~ var ~ '=' ~ value]) %}
+{% endfor %}
+  mysql:
+    image: {{ @('services.mysql.image') }}
+    labels:
+      - traefik.enable=false
+{% if command|length %}
+    command: {{ command|join(' ') }}
+{% endif %}
+    environment: {{ to_nice_yaml(deep_merge([
+        @('services.mysql.environment'),
+        @('services.mysql.environment_secrets')
+      ]), 2, 6) | raw }}
+    networks:
+      - private
+{% if @('app.build') != 'static' and @('docker.port_forward.enabled') %}
+    ports:
+      - "127.0.0.1:{{ @('database.port_forward') ? @('database.port_forward') : '0' }}:3306"
+{% endif %}

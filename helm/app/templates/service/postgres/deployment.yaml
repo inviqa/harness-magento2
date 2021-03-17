@@ -1,0 +1,61 @@
+{{ if .Values.service.postgres | default .Values.docker.services.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.resourcePrefix }}postgres
+  labels:
+    app.service: {{ .Values.resourcePrefix }}postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.service: {{ .Values.resourcePrefix }}postgres
+{{- if .Values.persistence.postgres.enabled }}
+  strategy:
+    type: Recreate
+{{- end }}
+  template:
+    metadata:
+      labels:
+        app.service: {{ .Values.resourcePrefix }}postgres
+    spec:
+      containers:
+      - env:
+        {{- range $key, $value := .Values.docker.services.postgres.environment }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- if .Values.docker.services.postgres.environment_secrets }}
+        envFrom:
+          - secretRef:
+              name: {{ .Values.resourcePrefix }}postgres
+        {{- end }}
+        image: {{ .Values.docker.services.postgres.image | quote }}
+        imagePullPolicy: Always
+        name: postgres
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            memory: {{ .Values.resources.memory.postgres }}
+          requests:
+            memory: {{ .Values.resources.memory.postgres }}
+        readinessProbe:
+          tcpSocket:
+            port: 5432
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: {{ .Values.resourcePrefix }}postgres-persistent-storage
+          mountPath: /var/lib/postgresql/data
+      restartPolicy: Always
+      volumes:
+      - name: {{ .Values.resourcePrefix }}postgres-persistent-storage
+{{- if .Values.persistence.postgres.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.resourcePrefix }}postgres-pv-claim
+{{- else }}
+        emptyDir: {}
+{{- end }}
+status: {}
+{{ end }}

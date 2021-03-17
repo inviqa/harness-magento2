@@ -1,0 +1,17 @@
+{{ if .Values.service.elasticsearch | default .Values.docker.services.elasticsearch.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.service: {{ .Values.resourcePrefix }}elasticsearch
+  name: {{ .Values.resourcePrefix }}elasticsearch
+spec:
+  ports:
+  - name: "9200"
+    port: 9200
+    targetPort: 9200
+  selector:
+    app.service: {{ .Values.resourcePrefix }}elasticsearch
+status:
+  loadBalancer: {}
+{{ end }}

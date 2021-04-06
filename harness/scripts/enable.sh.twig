@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+console_enabled()
+{
+    if [ "$APP_BUILD" = dynamic ]; then
+        [ -f .my127ws/.flag-console-built ]
+    else
+        [ -n "$(docker-compose ps --quiet console)" ]
+    fi
+}
+
+enable_all()
+{
+    local IS_BUILT=no
+    local HAS_FLAG=no
+
+    if [ -f .my127ws/.flag-built ]; then
+        HAS_FLAG=yes
+        IS_BUILT=yes
+        # If the containers no longer exist, we need to rebuild them
+        if [ -z "$(docker-compose ps --quiet)" ]; then
+            IS_BUILT=no
+        fi
+    fi
+
+    if [ "$APP_BUILD" = dynamic ] && console_enabled && [ -z "$(docker-compose ps --quiet console)" ]; then
+        rm .my127ws/.flag-console-built
+    fi
+
+    passthru ws networks external
+    if [ "$IS_BUILT" = no ]; then
+        if [ "$HAS_FLAG" = no ]; then
+            # remove all services, keeping console if considered built
+            if console_enabled; then
+                passthru "docker-compose ps --services | grep -v -Fxe console | xargs docker-compose rm --stop --"
+            else
+                passthru docker-compose down
+            fi
+        fi
+
+        if [ "$HAS_ASSETS" = yes ]; then
+            ws assets download
+        fi
+
+        "$APP_BUILD"
+
+        initial_start
+
+        touch .my127ws/.flag-built
+    else
+        if [ "$APP_BUILD" = dynamic ] && [ "$USE_MUTAGEN" = yes ]; then
+            passthru ws mutagen resume
+        fi
+
+        passthru docker-compose up -d
+        passthru docker-compose exec -T -u build console app welcome
+    fi
+}
+
+enable_console() {
+    if [ "$APP_BUILD" = dynamic ] && console_enabled && [ -z "$(docker-compose ps --quiet console)" ]; then
+        rm .my127ws/.flag-console-built
+    fi
+
+    passthru ws networks external
+    passthru ws external-images pull console
+    "${APP_BUILD}_console"
+}
+
+dynamic_console()
+{
+    if console_enabled; then
+        # ensure it is started
+        if [ -z "$(docker-compose ps --quiet console)" ]; then
+            passthru docker-compose up -d console
+        fi
+        return;
+    fi
+
+    # we synchronise then stop mutagen to avoid impacting CPU usage during the build
+    if [ "$USE_MUTAGEN" = yes ]; then
+        passthru ws mutagen start
+        passthru ws mutagen pause
+    fi
+
+    find .my127ws/docker/image/ -type d ! -perm u+rwx,go+rx,o-w -exec chmod u+rwx,go+rx,o-w {} +
+
+    passthru docker-compose up --build -d console
+    passthru docker-compose exec -T -u build console app build
+
+    if [ "$USE_MUTAGEN" = yes ]; then
+        ws mutagen resume
+    fi
+
+    touch .my127ws/.flag-console-built
+}
+
+dynamic()
+{
+    ws external-images pull
+
+    dynamic_console
+
+    passthru "docker-compose config --services | grep -v -Fwe console -Fxe cron -Fxe jenkins-runner -Fxe job-queue-consumer | xargs docker-compose build"
+
+    {% if @('services.cron.enabled') %}
+        passthru docker-compose build cron
+    {% endif %}
+    {% if @('services.jenkins-runner.enabled') %}
+        passthru docker-compose build jenkins-runner
+    {% endif %}
+    {% if @('services.job-queue-consumer.enabled') %}
+        passthru docker-compose build job-queue-consumer
+    {% endif %}
+}
+
+static_console()
+{
+    if [ "$HAS_ASSETS" = yes ]; then
+        ws assets download
+    fi
+    passthru docker-compose up --build -d console
+}
+
+static()
+{
+    ws app build
+}
+
+initial_start()
+{
+    # Bring up all services apart from cron
+    passthru "docker-compose config --services | grep -v -Fxe cron | xargs docker-compose up -d"
+
+    passthru docker-compose exec -T -u build console app init
+
+    {% if @('services.cron.enabled') %}
+    passthru docker-compose up -d cron
+    {% endif %}
+}
+
+"enable_$1"

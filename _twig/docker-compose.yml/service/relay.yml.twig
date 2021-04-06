@@ -1,0 +1,10 @@
+  relay:
+    build: .my127ws/docker/image/relay
+    labels:
+      - traefik.enable=false
+    networks:
+      private:
+        aliases:
+          - jaeger-relay
+          - mailhog-relay
+      shared: {}

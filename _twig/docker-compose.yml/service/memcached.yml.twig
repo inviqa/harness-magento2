@@ -1,0 +1,6 @@
+  memcached:
+    image: {{ @('services.memcached.image') }}
+    labels:
+      - traefik.enable=false
+    networks:
+      - private

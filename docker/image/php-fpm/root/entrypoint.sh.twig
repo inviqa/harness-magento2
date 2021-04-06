@@ -1,0 +1,30 @@
+#!/bin/bash
+
+run_steps()
+{
+    {% for poolName, pool in @('php-fpm.pools') -%}
+    FPM_NAME="{{ poolName }}" FPM_PORT="{{ pool.port }}" envsubst < /usr/local/etc/php-fpm.d/pool.conf.template > /usr/local/etc/php-fpm.d/{{ poolName }}.conf;
+    {% endfor %}
+
+    # run any command required to be executed at docker startup
+    {% for step in @('php.entrypoint.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+    {% for step in @('php-fpm.entrypoint.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+
+    # Clean up Tideways module loading if it's meant to be turned off
+    if [ -n "$TIDEWAYS_ENABLED" ] && [ -f /usr/local/etc/php/conf.d/docker-php-ext-tideways.ini ]; then
+      if [ "$TIDEWAYS_ENABLED" = "true" ]; then
+          sed -i'' "s#tideways.connection=.*$#tideways.connection=tcp://$TIDEWAYS_HOST:9135#" /usr/local/etc/php/conf.d/docker-php-ext-tideways.ini
+      else
+          rm /usr/local/etc/php/conf.d/docker-php-ext-tideways.ini
+      fi
+    fi
+}
+
+run_steps
+
+# run
+exec supervisord -c /etc/supervisor/supervisord.conf -n

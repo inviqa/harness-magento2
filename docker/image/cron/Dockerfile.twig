@@ -1,0 +1,38 @@
+{% if @('app.build') == 'static' %}
+FROM {{ @('docker.repository') ~ ':' ~ @('app.version') }}-php-fpm
+{% else %}
+FROM {{ @('workspace.name') ~ '-php-fpm:dev' }}
+{% endif %}
+# fix upstream signal
+STOPSIGNAL SIGTERM
+
+# Install cron
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get -qq -y --no-install-recommends install \
+   cron \
+   sudo \
+ # clean \
+ && apt-get auto-remove -qq -y \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /tmp/php-file-cache \
+ && chown -R www-data:www-data /tmp/php-file-cache
+
+WORKDIR /app
+COPY .my127ws/docker/image/cron/root /
+RUN chmod +x /cron-run-with-env.sh /entrypoint.sh /entrypoint.dynamic.sh
+{%- if @('app.build') == 'static' %} \
+ && bash /fix_app_permissions.sh
+{% endif %}
+
+{% if @('app.build') == 'dynamic' %}
+VOLUME /app
+{% endif %}
+ENV APP_MODE {{ @('app.mode') }}
+
+{% if @('app.build') == 'static' %}
+ENTRYPOINT ["/entrypoint.sh"]
+{% else %}
+ENTRYPOINT ["/entrypoint.dynamic.sh"]
+{% endif %}
+CMD ["sleep", "infinity"]

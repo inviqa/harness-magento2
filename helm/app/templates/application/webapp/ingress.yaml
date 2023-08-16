@@ -1,0 +1,31 @@
+{{ if and (index .Values.services .Values.ingress.target_service "enabled") (eq .Values.ingress.type "standard") }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webapp
+    app.service: {{ .Values.resourcePrefix }}webapp
+  name: {{ .Values.resourcePrefix }}webapp
+spec:
+  {{- with (pick .Values.ingress "ingressClassName" "tls") }}
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  rules:
+  - host: {{ index .Values.services "php-base" "environment" "APP_HOST" }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.resourcePrefix }}{{ .Values.ingress.target_service }}
+            port:
+              number: 80
+status:
+  loadBalancer: {}
+{{- end }}

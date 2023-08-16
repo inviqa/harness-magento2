@@ -1,0 +1,18 @@
+#!/bin/bash
+
+function task_build_backend()
+{(
+    set -e -o pipefail
+
+    cd {{ @('backend.path') }}
+
+    # shellcheck disable=SC2160
+    if [ ! {{ @('backend.build.when')|raw }} ]; then
+        return 0;
+    fi
+
+    {% for step in @('backend.build.steps') -%}
+    {{ step|raw }}
+    {% endfor %}
+
+)}

@@ -1,0 +1,179 @@
+{{- $service_php_fpm := include "service.resolved" (dict "root" $ "service_name" "php-fpm") | fromYaml -}}
+{{- if .Values.services.webapp.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.resourcePrefix }}webapp
+  labels:
+    {{- include "chart.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: webapp
+    app.service: {{ .Values.resourcePrefix }}webapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  {{- with (pick .Values.services.webapp "replicas") }}
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.service: {{ .Values.resourcePrefix }}webapp
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectors" $ | nindent 8 }}
+        app.kubernetes.io/component: webapp
+        app.service: {{ .Values.resourcePrefix }}webapp
+    spec:
+      affinity: {{- include "pod.affinity" (dict "root" $ "serviceName" "webapp" "service" .Values.services.webapp) | nindent 8 }}
+      {{- if not (eq "" (include "application.volumes.wwwDataPaths" .)) }}
+      initContainers:
+      - name: webapp-volume-permissions
+        image: {{ .Values.services.webapp.initContainers.volumePermissions.image }}
+        command:
+        - "/bin/chown"
+        {{- if .Values.services.webapp.initContainers.volumePermissions.recursive }}
+        - "-R"
+        {{- end }}
+        - "www-data"
+        {{- include "application.volumes.wwwDataPaths" . | indent 8 }}
+        volumeMounts:
+        {{- if not (and (eq "" (include "application.volumeMounts.backend" .)) (eq "" (include "application.volumeMounts.all" .)) ) }}
+        {{- include "application.volumeMounts.backend" . | indent 8 }}
+        {{- include "application.volumeMounts.all" . | indent 8 }}
+        {{- else }} []
+        {{- end }}
+      {{- end }}
+      containers:
+      {{- with .Values.services.nginx }}
+      - name: nginx
+        env:
+        {{- range $key, $value := (mergeOverwrite (dict) .environment .environment_dynamic) }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else}}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .environment_secrets }}
+        envFrom:
+          - secretRef:
+              name: {{ $.Values.resourcePrefix }}nginx
+        {{- end }}
+        image: {{ .image }}
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          limits:
+            memory: {{ .resources.memory }}
+          requests:
+            {{- with ((.resources.cpu | default (dict)).request | default nil) }}
+            cpu: {{ . }}
+            {{- end }}
+            memory: {{ .resources.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        {{- if not (eq "" (include "application.volumeMounts.all" $)) }}
+        {{- include "application.volumeMounts.all" $ | indent 8 }}
+        {{- else }} []
+        {{- end }}
+      {{- end }}
+
+      {{- with $service_php_fpm }}
+      - name: php-fpm
+        env:
+        {{- range $key, $value := (mergeOverwrite (dict) .environment .environment_dynamic) }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else}}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .environment_secrets }}
+        envFrom:
+          - secretRef:
+              name: {{ $.Values.resourcePrefix }}php-fpm
+        {{- end }}
+        image: {{ .image | quote }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9000
+        resources:
+          limits:
+            memory: {{ .resources.memory }}
+          requests:
+            {{- with ((.resources.cpu | default (dict)).request | default nil) }}
+            cpu: {{ . }}
+            {{- end }}
+            memory: {{ .resources.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        {{- if not (and (eq "" (include "application.volumeMounts.backend" $)) (eq "" (include "application.volumeMounts.all" $)) ) }}
+        {{- include "application.volumeMounts.backend" $ | indent 8 }}
+        {{- include "application.volumeMounts.all" $ | indent 8 }}
+        {{- else }} []
+        {{- end }}
+      {{- end }}
+
+      {{- with index .Values.services "php-fpm-exporter" }}
+      {{- if .enabled }}
+      - name: php-fpm-exporter
+        env:
+        {{- range $key, $value := (mergeOverwrite (dict) .environment .environment_dynamic) }}
+        {{- $tp := typeOf $value }}
+        - name: {{ $key | quote }}
+        {{- if eq $tp "string" }}
+          value: {{ tpl $value $ | quote }}
+        {{- else}}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        image: {{ .image | quote }}
+        imagePullPolicy: Always
+        ports:
+        - name: php-fpm-metrics
+          containerPort: 9253
+        resources:
+          limits:
+            memory: {{ .resources.memory }}
+          requests:
+            {{- with ((.resources.cpu | default (dict)).request | default nil) }}
+            cpu: {{ . }}
+            {{- end }}
+            memory: {{ .resources.memory }}
+        readinessProbe:
+          tcpSocket:
+            port: 9253
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      {{- end }}
+      {{- end }}
+{{- if .Values.docker.image_pull_config }}
+      imagePullSecrets:
+      - name: {{ .Values.resourcePrefix }}image-pull-config
+{{- end }}
+      restartPolicy: Always
+      enableServiceLinks: false
+      volumes:
+      {{- if not (and (eq "" (include "application.volumes.backend" .)) (eq "" (include "application.volumes.all" .)) ) }}
+      {{- include "application.volumes.backend" . | indent 6 }}
+      {{- include "application.volumes.all" . | indent 6 }}
+      {{- else }} []
+      {{- end }}
+      topologySpreadConstraints: {{- (include "pod.topologySpreadConstraints" (dict "root" $ "serviceName" "webapp" "service" .)) | nindent 8 }}
+status: {}
+{{- end }}

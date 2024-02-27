@@ -1,0 +1,14 @@
+  php-fpm-exporter:
+    image: {{ @('services.php-fpm-exporter.image') }}
+    environment: {{ to_nice_yaml(deep_merge([
+        @('services.php-fpm-exporter.environment'),
+        @('services.php-fpm-exporter.environment_dynamic'),
+        @('services.php-fpm-exporter.environment_secrets')
+      ]), 2, 6) | raw }}
+    labels:
+      # deprecated, a later workspace release will disable by default
+      - traefik.enable=false
+    depends_on:
+      - php-fpm
+    networks:
+      - private
